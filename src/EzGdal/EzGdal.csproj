@@ -1,0 +1,99 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <RollForward>Major</RollForward>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>EzGdal</RootNamespace>
+    <AssemblyName>ezgdal</AssemblyName>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <!--
+       Tool packaging.
+       PackageId is split per-RID so each consumer downloads only their own
+       platform's native binaries. PackTargetRid selects which package to build:
+         dotnet pack -p:PackTargetRid=osx-arm64
+         dotnet pack -p:PackTargetRid=linux-x64
+         dotnet pack -p:PackTargetRid=linux-arm64
+         dotnet pack -p:PackTargetRid=win-x64
+         dotnet pack -p:PackTargetRid=all       (meta-package, all RIDs in one)
+       Common command name is always `ezgdal`.
+  -->
+  <PropertyGroup Label="ToolPackage">
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>ezgdal</ToolCommandName>
+    <Version>0.1.0</Version>
+    <Authors>masa</Authors>
+    <Description>One-binary, portable GDAL CLI. Supports legacy EXE names (gdalinfo, gdal_translate, gdalwarp, ogr2ogr, ogrinfo, ...) plus the GDAL 3.12+ unified `gdal` CLI. After install, run `ezgdal install-applets` to expose legacy EXE-name symlinks. Native binaries for $(PackTargetRid).</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageOutputPath>$(MSBuildThisFileDirectory)..\..\nupkg</PackageOutputPath>
+    <PackageTags>gdal;cli;geospatial;ogr;raster;vector;pmtiles;ogr2ogr;gdalinfo</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+
+    <PackageId Condition="'$(PackTargetRid)' == 'osx-arm64'">Jumboly.EzGdal.osx-arm64</PackageId>
+    <PackageId Condition="'$(PackTargetRid)' == 'linux-x64'">Jumboly.EzGdal.linux-x64</PackageId>
+    <PackageId Condition="'$(PackTargetRid)' == 'linux-arm64'">Jumboly.EzGdal.linux-arm64</PackageId>
+    <PackageId Condition="'$(PackTargetRid)' == 'win-x64'">Jumboly.EzGdal.win-x64</PackageId>
+    <!-- Meta-package: every supported RID's native binaries in one nupkg. -->
+    <PackageId Condition="'$(PackTargetRid)' == 'all'">Jumboly.EzGdal</PackageId>
+    <!-- Fallback when PackTargetRid is not set: dev-only id, not for release. -->
+    <PackageId Condition="'$(PackTargetRid)' == ''">Jumboly.EzGdal.dev</PackageId>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(PackAsTool)' == 'true'">
+    <None Include="$(MSBuildThisFileDirectory)..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <!--
+       Single-file portable publish. Only takes effect when a RuntimeIdentifier
+       is specified (i.e. `dotnet publish -r <rid>`).
+  -->
+  <PropertyGroup Label="PortablePublish" Condition="'$(RuntimeIdentifier)' != ''">
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    <DebugType>embedded</DebugType>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+  </PropertyGroup>
+
+  <!--
+       Resolve which native runtime packages to pull, exactly once per RID.
+       Each _Need* property fans in three signals: PackTargetRid (tool pack),
+       RuntimeIdentifier (portable publish), and host platform (dev-loop).
+  -->
+  <PropertyGroup Label="RuntimeSelection">
+    <_HostIsArm64>$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().Equals('Arm64'))</_HostIsArm64>
+    <_DevLoop>false</_DevLoop>
+    <_DevLoop Condition="'$(PackTargetRid)' == '' And '$(RuntimeIdentifier)' == ''">true</_DevLoop>
+
+    <_NeedMacArm64>false</_NeedMacArm64>
+    <_NeedMacArm64 Condition="'$(PackTargetRid)' == 'osx-arm64' Or '$(PackTargetRid)' == 'all' Or '$(RuntimeIdentifier)' == 'osx-arm64'">true</_NeedMacArm64>
+    <_NeedMacArm64 Condition="'$(_DevLoop)' == 'true' And $([MSBuild]::IsOSPlatform('OSX')) And '$(_HostIsArm64)' == 'True'">true</_NeedMacArm64>
+
+    <_NeedMacX64>false</_NeedMacX64>
+    <_NeedMacX64 Condition="'$(RuntimeIdentifier)' == 'osx-x64'">true</_NeedMacX64>
+    <_NeedMacX64 Condition="'$(_DevLoop)' == 'true' And $([MSBuild]::IsOSPlatform('OSX')) And '$(_HostIsArm64)' == 'False'">true</_NeedMacX64>
+
+    <_NeedLinux>false</_NeedLinux>
+    <_NeedLinux Condition="'$(PackTargetRid)' == 'linux-x64' Or '$(PackTargetRid)' == 'linux-arm64' Or '$(PackTargetRid)' == 'all'">true</_NeedLinux>
+    <_NeedLinux Condition="'$(RuntimeIdentifier)' == 'linux-x64' Or '$(RuntimeIdentifier)' == 'linux-arm64'">true</_NeedLinux>
+    <_NeedLinux Condition="'$(_DevLoop)' == 'true' And $([MSBuild]::IsOSPlatform('Linux'))">true</_NeedLinux>
+
+    <_NeedWindows>false</_NeedWindows>
+    <_NeedWindows Condition="'$(PackTargetRid)' == 'win-x64' Or '$(PackTargetRid)' == 'all' Or '$(RuntimeIdentifier)' == 'win-x64'">true</_NeedWindows>
+    <_NeedWindows Condition="'$(_DevLoop)' == 'true' And $([MSBuild]::IsOSPlatform('Windows'))">true</_NeedWindows>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MaxRev.Gdal.Core" Version="3.12.3.499" />
+    <PackageReference Include="MaxRev.Gdal.MacosRuntime.Minimal.arm64" Version="3.12.2.472" Condition="'$(_NeedMacArm64)' == 'true'" />
+    <PackageReference Include="MaxRev.Gdal.MacosRuntime.Minimal.x64"   Version="3.12.2.472" Condition="'$(_NeedMacX64)' == 'true'" />
+    <PackageReference Include="MaxRev.Gdal.LinuxRuntime.Minimal"       Version="3.12.0.397" Condition="'$(_NeedLinux)' == 'true'" />
+    <PackageReference Include="MaxRev.Gdal.WindowsRuntime.Minimal"     Version="3.12.0.397" Condition="'$(_NeedWindows)' == 'true'" />
+  </ItemGroup>
+
+</Project>
