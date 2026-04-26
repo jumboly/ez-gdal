@@ -147,13 +147,21 @@ jobs:
           $dummyDll = "verify\DummyPlugin\build\Release\ogr_Dummy.dll"
           if (-not (Test-Path $dummyDll)) { throw "ogr_Dummy.dll not built at $dummyDll" }
 
-          # autoload smoke。stderr も取り込み (entry-point 解決失敗等を可視化)。
-          # `Select-String -Quiet` を使って null/空配列でも安全に判定する。
+          # 診断 1: ビルドされた DLL が RegisterOGRDummy を実際に export しているか確認
+          Write-Host "--- dumpbin /exports ogr_Dummy.dll ---"
+          dumpbin /exports $dummyDll
+          Write-Host "---------------------------------------"
+
+          # autoload smoke。CPL_DEBUG=ON で plugin loader の "Auto register" /
+          # "Can't find requested entry point" 等の診断 log を表示。stderr も
+          # 取り込んで Select-String -Quiet で null-safe 判定。
           .\tool-test\ezgdal install-plugin $dummyDll
+          $env:CPL_DEBUG = "ON"
           $formats = (.\tool-test\ezgdal ogrinfo --formats 2>&1) -join "`n"
-          Write-Host "--- ogrinfo --formats (stdout+stderr) ---"
+          Remove-Item Env:CPL_DEBUG
+          Write-Host "--- ogrinfo --formats (CPL_DEBUG=ON, stdout+stderr) ---"
           Write-Host $formats
-          Write-Host "------------------------------------------"
+          Write-Host "--------------------------------------------------------"
           if (-not ($formats | Select-String -Pattern '^\s*Dummy\s+-' -Quiet)) {
               throw "Dummy driver not visible after install-plugin"
           }

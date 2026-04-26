@@ -15,7 +15,16 @@
 
 #include "ogrsf_frmts.h"
 
-extern "C" void CPL_DLL RegisterOGRDummy();
+// GDAL の CPL_DLL は plugin 文脈 (GDAL_COMPILATION 未定義) の MSVC で空マクロに
+// 展開されるため、Register 関数が DLL から export されない。Windows MSVC では
+// 明示的に __declspec(dllexport) を付ける必要がある。
+#ifdef _MSC_VER
+#  define EZGDAL_PLUGIN_EXPORT __declspec(dllexport)
+#else
+#  define EZGDAL_PLUGIN_EXPORT
+#endif
+
+extern "C" EZGDAL_PLUGIN_EXPORT void RegisterOGRDummy();
 
 void RegisterOGRDummy()
 {
