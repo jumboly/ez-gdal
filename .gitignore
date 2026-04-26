@@ -8,6 +8,7 @@
 /publish/
 /tool-test/
 /verify/DummyPlugin/build/
+/.scratch/
 
 # dotenv files
 .env
