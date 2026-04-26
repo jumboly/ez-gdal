@@ -112,10 +112,47 @@ patchelf --remove-needed libgdal.so.38 ogr_MyDriver.so
 
 #### Windows
 
-Windows の DLL では undefined symbol を許容できない。プラグインを
-ezgdal 配布物内の `gdal.lib` (import library) にリンクするか、ezgdal の
-ヘッダ + libgdal.dll の `.lib` import library を別途配布する経路が必要。
-現状この経路は β サポートとし、メインターゲットは macOS / Linux。
+Windows DLL では undefined symbol を許容できないため、ezgdal が同梱する
+`gdal.dll` に対する import library (`gdal.lib`) にリンクする必要がある。
+`Jumboly.EzGdal.win-x64` nupkg は `sdk/` フォルダに以下を同梱している:
+
+| パス | 内容 |
+|---|---|
+| `sdk/lib/gdal.lib` | ezgdal 内蔵 `gdal.dll` から生成した import library |
+| `sdk/include/gdal/*.h` | GDAL upstream (3.12.x) の公開ヘッダ (173 ファイル) |
+| `sdk/cmake/EzGdalSdk.cmake` | `find_package(EzGdalSdk)` 用 CMake config |
+
+```powershell
+# 1. ezgdal tool を install
+dotnet tool install --tool-path .\tool-test Jumboly.EzGdal.win-x64
+
+# 2. SDK ディレクトリを環境変数で指す (.store/.../tools/net10.0/any/sdk)
+$sdk = (Get-ChildItem -Recurse -Filter gdal.lib -Path tool-test).Directory.Parent.FullName
+$env:EZGDAL_SDK_DIR = $sdk
+
+# 3. プラグインを Developer Command Prompt for VS から build
+cmake -S . -B build -A x64
+cmake --build build --config Release
+```
+
+CMake snippet (プラグイン作者側):
+
+```cmake
+add_library(ogr_MyDriver MODULE ogrmydriver.cpp)
+list(APPEND CMAKE_PREFIX_PATH "$ENV{EZGDAL_SDK_DIR}/cmake")
+find_package(EzGdalSdk REQUIRED)
+target_link_libraries(ogr_MyDriver PRIVATE EzGdalSdk::gdal)
+set_target_properties(ogr_MyDriver PROPERTIES PREFIX "" SUFFIX ".dll")
+```
+
+完全に動く例は [`verify/DummyPlugin/CMakeLists.txt`](../verify/DummyPlugin/CMakeLists.txt)
+の `if(WIN32)` 分岐を参照。
+
+> ezgdal `EzGdalSdk::gdal` は `IMPORTED_IMPLIB` のみを設定し runtime DLL は
+> 持たない (= プラグインに `gdal.dll` を複製しない)。実行時は host ezgdal
+> プロセスに既にロード済みの `gdal.dll` から symbol が解決される。
+> プラグイン側に独自の `gdal.dll` を持ち込むと §4.1 (macOS/Linux と同じ)
+> driver manager 分裂を起こすので絶対にやらない。
 
 ### 4.2 関数ポインタ (`pfnIdentify` / `pfnOpen` など) の代入
 

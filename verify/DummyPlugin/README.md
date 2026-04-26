@@ -9,7 +9,7 @@
 | 項目 | 値 |
 |---|---|
 | ドライバ名 | `Dummy` |
-| ファイル名 | `ogr_Dummy.so` |
+| ファイル名 | `ogr_Dummy.so` (macOS / Linux) / `ogr_Dummy.dll` (Windows) |
 | エクスポートシンボル | `RegisterOGRDummy` |
 | 機能 | なし。Identify は常に 0、Open は常に nullptr |
 
@@ -31,7 +31,7 @@ ezgdal gdalinfo --version             # 内蔵バージョン
 pkg-config --modversion gdal          # host 側 (Homebrew の例)
 ```
 
-## ビルド
+## ビルド (macOS / Linux)
 
 ```bash
 cd verify/DummyPlugin
@@ -44,6 +44,27 @@ cmake --build build
 - macOS (Homebrew): `brew install gdal`
 - Linux (apt): `sudo apt install libgdal-dev`
 - Linux (conda): `conda install -c conda-forge gdal`
+
+## ビルド (Windows)
+
+Windows DLL は undefined symbol を許容しないため、ezgdal が同梱する
+gdal.dll に対する import library (gdal.lib) にリンクする必要がある。
+`Jumboly.EzGdal.win-x64` nupkg は `sdk/` フォルダに gdal.lib + headers +
+cmake config を同梱しているので、それを `EZGDAL_SDK_DIR` で指す:
+
+```powershell
+# 1. ezgdal を tool install
+dotnet tool install --tool-path .\tool-test Jumboly.EzGdal.win-x64
+
+# 2. SDK ディレクトリを環境変数で指す (.store/.../tools/net10.0/any/sdk)
+$sdk = (Get-ChildItem -Recurse -Filter gdal.lib -Path tool-test).Directory.Parent.FullName
+$env:EZGDAL_SDK_DIR = $sdk
+
+# 3. Developer Command Prompt for VS から (cl / cmake が PATH 上)
+cmake -S verify\DummyPlugin -B verify\DummyPlugin\build -A x64
+cmake --build verify\DummyPlugin\build --config Release
+# → verify\DummyPlugin\build\Release\ogr_Dummy.dll
+```
 
 ## ezgdal で使う
 

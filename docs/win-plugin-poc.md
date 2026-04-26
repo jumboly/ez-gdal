@@ -1,6 +1,13 @@
 # Windows プラグイン正式サポート PoC まとめ
 
-> ステータス: **Phase 1 (調査と PoC) 完了** (2026-04-26)。Phase 2 (配布方式選定) は本書の判断材料を元に別途実施。
+> ステータス: **Phase 1 (調査と PoC) 完了** (2026-04-26)。
+> **Phase 2 (本番経路化) 完了** (2026-04-26、配布方式 A2 採用)。
+>
+> 本書は判断材料の記録として保持する。実装は以下に取り込まれた:
+> - SDK 生成: [`scripts/win-sdk/generate-sdk.ps1`](../scripts/win-sdk/generate-sdk.ps1) (PoC 2 本のラッパー)
+> - 同梱: [`src/EzGdal/EzGdal.csproj`](../src/EzGdal/EzGdal.csproj) の `<ItemGroup Condition="'$(PackTargetRid)' == 'win-x64' ...">`
+> - CI: [`.github/workflows/release.yml`](../.github/workflows/release.yml) の `pack-windows` ジョブ + `verify` の Windows e2e smoke
+> - 利用ガイド: [`docs/plugin-authoring.md` §4.1](plugin-authoring.md#windows)
 
 ez-gdal の外部プラグイン機構は macOS / Linux で完成しているが、Windows は
 β サポート (`README.md` 既知の制限 / `docs/plugin-authoring.md §4.1`)。

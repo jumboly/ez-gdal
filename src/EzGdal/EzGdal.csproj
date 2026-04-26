@@ -9,6 +9,15 @@
     <RootNamespace>EzGdal</RootNamespace>
     <AssemblyName>ezgdal</AssemblyName>
     <InvariantGlobalization>true</InvariantGlobalization>
+
+    <!--
+         MaxRev runtime と GDAL upstream のバージョンを 1 ヶ所に集約する。
+         scripts/win-sdk/generate-sdk.ps1 もこの値と揃える運用 (CI で
+         `dotnet msbuild -getProperty:MaxRevGdalVersion` で取り出して
+         PowerShell 引数として渡す)。
+    -->
+    <MaxRevGdalVersion>3.12.3.499</MaxRevGdalVersion>
+    <GdalUpstreamVersion>3.12.3</GdalUpstreamVersion>
   </PropertyGroup>
 
   <!--
@@ -55,6 +64,19 @@
     <None Include="$(MSBuildThisFileDirectory)..\..\README.md" Pack="true" PackagePath="\" />
     <None Include="$(MSBuildThisFileDirectory)..\..\LICENSE" Pack="true" PackagePath="\" />
     <None Include="$(MSBuildThisFileDirectory)..\..\licenses\**\*" Pack="true" PackagePath="licenses\" />
+  </ItemGroup>
+
+  <!--
+       Windows プラグイン作者向け SDK (gdal.lib + headers + cmake config) を
+       Jumboly.EzGdal.win-x64 nupkg のみに同梱する。生成は CI windows ジョブが
+       scripts/win-sdk/generate-sdk.ps1 で行い、scripts/win-sdk/build/sdk/ に
+       置く。Exists() ガードで生成前/非 Windows ビルドでも pack が通る
+       (ローカル mac/linux の dev-loop が壊れない)。
+  -->
+  <ItemGroup Condition="'$(PackTargetRid)' == 'win-x64' And Exists('$(MSBuildThisFileDirectory)..\..\scripts\win-sdk\build\sdk')">
+    <None Include="$(MSBuildThisFileDirectory)..\..\scripts\win-sdk\build\sdk\**\*"
+          Pack="true"
+          PackagePath="sdk" />
   </ItemGroup>
 
   <!--
@@ -113,11 +135,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="MaxRev.Gdal.Core" Version="3.12.3.499" />
-    <PackageReference Include="MaxRev.Gdal.MacosRuntime.Minimal.arm64" Version="3.12.3.499" Condition="'$(_NeedMacArm64)' == 'true'" />
-    <PackageReference Include="MaxRev.Gdal.LinuxRuntime.Minimal.x64"   Version="3.12.3.499" Condition="'$(_NeedLinuxX64)' == 'true'" />
-    <PackageReference Include="MaxRev.Gdal.LinuxRuntime.Minimal.arm64" Version="3.12.3.499" Condition="'$(_NeedLinuxArm64)' == 'true'" />
-    <PackageReference Include="MaxRev.Gdal.WindowsRuntime.Minimal"     Version="3.12.3.499" Condition="'$(_NeedWindows)' == 'true'" />
+    <PackageReference Include="MaxRev.Gdal.Core" Version="$(MaxRevGdalVersion)" />
+    <PackageReference Include="MaxRev.Gdal.MacosRuntime.Minimal.arm64" Version="$(MaxRevGdalVersion)" Condition="'$(_NeedMacArm64)' == 'true'" />
+    <PackageReference Include="MaxRev.Gdal.LinuxRuntime.Minimal.x64"   Version="$(MaxRevGdalVersion)" Condition="'$(_NeedLinuxX64)' == 'true'" />
+    <PackageReference Include="MaxRev.Gdal.LinuxRuntime.Minimal.arm64" Version="$(MaxRevGdalVersion)" Condition="'$(_NeedLinuxArm64)' == 'true'" />
+    <PackageReference Include="MaxRev.Gdal.WindowsRuntime.Minimal"     Version="$(MaxRevGdalVersion)" Condition="'$(_NeedWindows)' == 'true'" />
   </ItemGroup>
 
 </Project>

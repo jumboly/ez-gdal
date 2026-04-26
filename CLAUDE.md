@@ -147,7 +147,8 @@ return outDs == null ? ExitCode.Failure : ExitCode.Success;
 - `Util/PluginPaths.cs` — OS 別ユーザープラグインディレクトリ (macOS: `~/Library/Application Support/ezgdal/plugins/`、Linux: `$XDG_DATA_HOME/ezgdal/plugins/`、Windows: `%APPDATA%\ezgdal\plugins\`)
 - `Bootstrap.ApplyUserPluginPath()` — `GdalBase.ConfigureAll()` の前に `Gdal.SetConfigOption("GDAL_DRIVER_PATH", combined)` を呼んで自動ロードを仕込む。env を OS / 親シェルに書き戻さない不変条件を維持
 - `Applets/InstallPluginApplet.cs` / `ListPluginsApplet.cs` / `RemovePluginApplet.cs` — `ezgdal install-plugin / list-plugins / remove-plugin` の 3 サブコマンド。`AppletRegistry.Dispatchers` には登録せず、`Program.RunMainEntry` の硬コーディング分岐で扱う (legacy GDAL EXE 名互換ではないため)
-- 動作確認: `verify/DummyPlugin/` の最小 OGR ドライバ (`ogr_Dummy.so`) を `cmake -S . -B build && cmake --build build` でビルドし、`ezgdal install-plugin verify/DummyPlugin/build/ogr_Dummy.so` → `ezgdal ogrinfo --formats | grep Dummy` で end-to-end 確認
+- 動作確認: `verify/DummyPlugin/` の最小 OGR ドライバ (`ogr_Dummy.so` / Windows は `ogr_Dummy.dll`) を `cmake -S . -B build && cmake --build build` でビルドし、`ezgdal install-plugin verify/DummyPlugin/build/ogr_Dummy.so` → `ezgdal ogrinfo --formats | grep Dummy` で end-to-end 確認
+- Windows プラグイン作者向け SDK (`scripts/win-sdk/`) — `Jumboly.EzGdal.win-x64` nupkg は `sdk/` フォルダに `gdal.lib` (import library) + GDAL ヘッダ + `EzGdalSdk.cmake` config を同梱する。生成は `scripts/win-sdk/generate-sdk.ps1` (内部で `gen-import-lib.ps1` + `fetch-gdal-headers.ps1` を呼ぶ) が CI windows ジョブで実行。MaxRev `gdal.dll` から `dumpbin /exports` → `.def` → `lib /def` で .lib を起こし、GDAL upstream tarball から公開ヘッダを抽出する。プラグイン作者は `EZGDAL_SDK_DIR` 環境変数で sdk/ を指し `find_package(EzGdalSdk REQUIRED)` で参照。`docs/plugin-authoring.md §4.1` の Windows 章を参照
 
 ### GDAL 標準 CLI フラグの統合 (`Util/GdalCli.cs`)
 
@@ -200,5 +201,4 @@ Intel Mac (osx-x64) は GitHub Actions の macos-13 runner が deprecation/queue
 
 - 起動オーバーヘッド ~100-500ms（.NET ランタイム + ネイティブ展開）。シェルスクリプトで多重ループ起動する用途では本物 GDAL EXE のほうが高速
 - `gdalmanage` は GDAL に C API がなく未対応（`ezgdal vsi list` / `vsi copy` 等で代替推奨）
-- Windows での外部プラグインは β サポート (`docs/plugin-authoring.md` §4.1)。macOS / Linux はリンク時 `-undefined dynamic_lookup` / `--allow-shlib-undefined` でホスト libgdal にシンボル解決を委ねられるが、Windows DLL は同等手段がなく ezgdal 同梱 libgdal の import library が必要
 - bash 補完は bash 4+ 必須 (連想配列 `declare -A` を使うため、macOS の system bash 3.2 では何もしない)。シェル補完の対象は GDAL 3.12+ 統一 CLI ツリーのみ — legacy applet (`gdalinfo` / `ogr2ogr` 等) の単独補完は提供しない
