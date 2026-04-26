@@ -22,7 +22,7 @@ GDAL を内包したワンバイナリ・ポータブル C# CLI ツール (.NET 
 ### ビルド・パック
 
 ```bash
-# global tool 用 RID 別 nupkg を 4 つ生成（osx-arm64 / linux-x64 / linux-arm64 / win-x64）
+# global tool 用 RID 別 nupkg を 5 つ生成（osx-arm64 / osx-x64 / linux-x64 / linux-arm64 / win-x64）
 ./scripts/pack-tool.sh
 
 # 1 つの RID のみ
@@ -60,11 +60,12 @@ dotnet tool install --tool-path ./tool-test --add-source ./nupkg Jumboly.EzGdal.
 dotnet run --project verify/DriverProbe/DriverProbe.csproj
 ```
 
-NuGet.org への push（メンテナ向け）は README.md の「NuGet.org への公開」節を参照。
+NuGet.org への push（メンテナ向け）は `docs/release.md` を参照。
 
 ## ドキュメント
 
-- `README.md` — エンドユーザー向け、インストール手順 / RID 別 PackageId 一覧 / 外部プラグインの利用方法 / NuGet.org publish 手順
+- `README.md` — エンドユーザー向け、インストール手順 / RID 別 PackageId 一覧 / 外部プラグインの利用方法
+- `docs/release.md` — メンテナ向け、ローカルビルド (`pack-tool.sh` / `publish-all.sh`) と NuGet.org publish 手順
 - `docs/plugin-authoring.md` — 外部 GDAL ドライバプラグイン作成者向け。ABI 互換性、ファイル命名規約、ビルドフラグ (`-undefined dynamic_lookup` / `--allow-shlib-undefined`)、トラブルシュート
 - `docs/external-plugin-support.md` — 外部プラグイン対応の検討時に整理した経緯 (実装済み)。実装方針 A/B/C のうち B 相当を採用
 - `verify/DriverProbe/` — MaxRev.Gdal の機能確認スタンドアロン（前述）
@@ -145,9 +146,10 @@ return outDs == null ? ExitCode.Failure : ExitCode.Success;
 
 ### NuGet パッケージング設計
 
-`src/EzGdal/EzGdal.csproj` の `_NeedMacArm64` / `_NeedLinux` / `_NeedWindows` プロパティが 3 つの呼び出しシナリオ（`PackTargetRid` 指定 / `RuntimeIdentifier` 指定 / dev-loop）から、必要な MaxRev runtime のみを選択する。
+`src/EzGdal/EzGdal.csproj` の `_NeedMacArm64` / `_NeedMacX64` / `_NeedLinuxX64` / `_NeedLinuxArm64` / `_NeedWindows` プロパティが 3 つの呼び出しシナリオ（`PackTargetRid` 指定 / `RuntimeIdentifier` 指定 / dev-loop）から、必要な MaxRev runtime のみを選択する。MaxRev は OS×arch 単位で別 NuGet パッケージを公開しているので、ezgdal も RID と 1:1 で揃え、各 nupkg には自分の RID 分の native だけを入れる。
 
-- `dotnet pack -p:PackTargetRid=osx-arm64` → `Jumboly.EzGdal.osx-arm64`（51MB）
+- `dotnet pack -p:PackTargetRid=osx-arm64` → `Jumboly.EzGdal.osx-arm64`（~51MB）
+- `dotnet pack -p:PackTargetRid=linux-x64` → `Jumboly.EzGdal.linux-x64`（~50MB、x64 native のみ）
 - `dotnet publish -r osx-arm64` → portable single-file（~84MB）
 - `dotnet build` → host RID のみ（dev-loop 高速）
 
