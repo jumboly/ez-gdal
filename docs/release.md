@@ -23,7 +23,7 @@ git add src/EzGdal/EzGdal.csproj
 git commit -m "release: v1.0.1"
 git push origin main
 
-# 3. tag を push → release.yml が pack → 5 RID verify → publish 待機
+# 3. tag を push → release.yml が pack → 4 RID verify → publish 待機
 git tag v1.0.1 -a -m "v1.0.1"
 git push origin v1.0.1
 
@@ -33,7 +33,7 @@ gh run list --workflow=release.yml --limit 3
 
 # 5. publish ジョブが Environment "nuget" の reviewer 待ちで pending になる
 #    GitHub web の Actions → 該当 run → publish job で "Approve and run" を押す
-#    すると 5 nupkg が NuGet.org に push される
+#    すると 4 nupkg が NuGet.org に push される
 
 # 6. インデックスは 5〜30 分のラグあり
 for rid in osx-arm64 linux-x64 linux-arm64 win-x64; do
@@ -44,9 +44,9 @@ done
 
 `release.yml` は 3 段構成:
 
-1. **pack** (ubuntu-22.04): tag が csproj `<Version>` と一致するか検査 → `./scripts/pack-tool.sh` で 5 RID pack → artifact 化
+1. **pack** (2 並列ジョブ): `pack-linux` (ubuntu-22.04) で 3 RID (osx-arm64 / linux-x64 / linux-arm64)、`pack-windows` (windows-2022) で win-x64 + sdk/ 同梱 (`scripts/win-sdk/generate-sdk.ps1` 経由) を pack → artifact 化
 2. **verify** (5 OS マトリクス): artifact を download → `dotnet tool install` → smoke (`ezgdal --version` / `raster --formats`) → DriverProbe
-3. **publish** (ubuntu-22.04, environment=`nuget`): reviewer 承認後に `dotnet nuget push --skip-duplicate` を 5 nupkg ループ
+3. **publish** (ubuntu-22.04, environment=`nuget`): reviewer 承認後に `dotnet nuget push --skip-duplicate` を 4 nupkg ループ
 
 ### 修正版を出したい場合
 
