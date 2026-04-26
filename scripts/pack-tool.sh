@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 # RID 別の EzGdal .NET global tool nupkg を ./nupkg/ に生成する。
-# 1 つの nupkg = 1 RID（osx-arm64 / linux-x64 / linux-arm64 / win-x64）+ 全 RID 入りのメタ。
+# 1 つの nupkg = 1 RID（osx-arm64 / linux-x64 / linux-arm64 / win-x64）。
 # 第 1 引数で対象 RID を 1 つに絞れる（省略時は全部）。
-#   pack-tool.sh                     # すべて
+#   pack-tool.sh                     # 4 RID すべて
 #   pack-tool.sh osx-arm64           # 指定 RID のみ
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PROJECT="$ROOT/src/EzGdal/EzGdal.csproj"
 
-RIDS=(osx-arm64 linux-x64 linux-arm64 win-x64 all)
+RIDS=(osx-arm64 linux-x64 linux-arm64 win-x64)
 ONLY="${1:-}"
 
 mkdir -p "$ROOT/nupkg"

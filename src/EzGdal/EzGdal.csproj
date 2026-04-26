@@ -19,7 +19,6 @@
          dotnet pack -p:PackTargetRid=linux-x64
          dotnet pack -p:PackTargetRid=linux-arm64
          dotnet pack -p:PackTargetRid=win-x64
-         dotnet pack -p:PackTargetRid=all       (meta-package, all RIDs in one)
        Common command name is always `ezgdal`.
   -->
   <PropertyGroup Label="ToolPackage">
@@ -37,8 +36,6 @@
     <PackageId Condition="'$(PackTargetRid)' == 'linux-x64'">Jumboly.EzGdal.linux-x64</PackageId>
     <PackageId Condition="'$(PackTargetRid)' == 'linux-arm64'">Jumboly.EzGdal.linux-arm64</PackageId>
     <PackageId Condition="'$(PackTargetRid)' == 'win-x64'">Jumboly.EzGdal.win-x64</PackageId>
-    <!-- Meta-package: every supported RID's native binaries in one nupkg. -->
-    <PackageId Condition="'$(PackTargetRid)' == 'all'">Jumboly.EzGdal</PackageId>
     <!-- Fallback when PackTargetRid is not set: dev-only id, not for release. -->
     <PackageId Condition="'$(PackTargetRid)' == ''">Jumboly.EzGdal.dev</PackageId>
   </PropertyGroup>
@@ -71,7 +68,7 @@
     <_DevLoop Condition="'$(PackTargetRid)' == '' And '$(RuntimeIdentifier)' == ''">true</_DevLoop>
 
     <_NeedMacArm64>false</_NeedMacArm64>
-    <_NeedMacArm64 Condition="'$(PackTargetRid)' == 'osx-arm64' Or '$(PackTargetRid)' == 'all' Or '$(RuntimeIdentifier)' == 'osx-arm64'">true</_NeedMacArm64>
+    <_NeedMacArm64 Condition="'$(PackTargetRid)' == 'osx-arm64' Or '$(RuntimeIdentifier)' == 'osx-arm64'">true</_NeedMacArm64>
     <_NeedMacArm64 Condition="'$(_DevLoop)' == 'true' And $([MSBuild]::IsOSPlatform('OSX')) And '$(_HostIsArm64)' == 'True'">true</_NeedMacArm64>
 
     <_NeedMacX64>false</_NeedMacX64>
@@ -79,12 +76,12 @@
     <_NeedMacX64 Condition="'$(_DevLoop)' == 'true' And $([MSBuild]::IsOSPlatform('OSX')) And '$(_HostIsArm64)' == 'False'">true</_NeedMacX64>
 
     <_NeedLinux>false</_NeedLinux>
-    <_NeedLinux Condition="'$(PackTargetRid)' == 'linux-x64' Or '$(PackTargetRid)' == 'linux-arm64' Or '$(PackTargetRid)' == 'all'">true</_NeedLinux>
+    <_NeedLinux Condition="'$(PackTargetRid)' == 'linux-x64' Or '$(PackTargetRid)' == 'linux-arm64'">true</_NeedLinux>
     <_NeedLinux Condition="'$(RuntimeIdentifier)' == 'linux-x64' Or '$(RuntimeIdentifier)' == 'linux-arm64'">true</_NeedLinux>
     <_NeedLinux Condition="'$(_DevLoop)' == 'true' And $([MSBuild]::IsOSPlatform('Linux'))">true</_NeedLinux>
 
     <_NeedWindows>false</_NeedWindows>
-    <_NeedWindows Condition="'$(PackTargetRid)' == 'win-x64' Or '$(PackTargetRid)' == 'all' Or '$(RuntimeIdentifier)' == 'win-x64'">true</_NeedWindows>
+    <_NeedWindows Condition="'$(PackTargetRid)' == 'win-x64' Or '$(RuntimeIdentifier)' == 'win-x64'">true</_NeedWindows>
     <_NeedWindows Condition="'$(_DevLoop)' == 'true' And $([MSBuild]::IsOSPlatform('Windows'))">true</_NeedWindows>
   </PropertyGroup>
 

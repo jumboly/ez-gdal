@@ -13,21 +13,7 @@ GDAL の公式 EXE (`gdalinfo` / `gdal_translate` / `gdalwarp` / `ogr2ogr` / `og
 
 ### A. Global tool（.NET 10 ランタイム必須、最も手軽）
 
-2 種類の nupkg を提供しています。好きな方を選んでください：
-
-#### A1. メタパッケージ（RID 不問、最も簡単）
-
-```bash
-dotnet tool install -g Jumboly.EzGdal
-ezgdal install-applets
-gdalinfo /path/to/sample.tif
-```
-
-`Jumboly.EzGdal` は対応する全 RID（osx-arm64 / linux-x64 / linux-arm64 / win-x64）の native binaries を 1 nupkg にまとめています。RID を意識せずに install できる代わりに、サイズが ~186MB（展開 ~920MB）になります。
-
-#### A2. RID 別パッケージ（サイズ最小）
-
-自分のプラットフォームに対応する 1 つを選びます：
+PackageId は **RID 別**に分かれています。自分のプラットフォームに対応する 1 つを選んでください：
 
 | プラットフォーム | PackageId | nupkg サイズ |
 |---|---|---|
@@ -90,31 +76,30 @@ dotnet tool uninstall -g Jumboly.EzGdal.osx-arm64   # install したのと同じ
 
 1. [NuGet.org](https://www.nuget.org/) でアカウント作成
 2. [API Keys](https://www.nuget.org/account/apikeys) で Push スコープの key を作成（Glob: `Jumboly.*`）
-3. 5 つの nupkg をまとめて pack & push:
+3. 4 つの nupkg をまとめて pack & push:
 
    ```bash
    ./scripts/pack-tool.sh
-   for f in ./nupkg/Jumboly.EzGdal*.0.1.0.nupkg; do
+   for f in ./nupkg/Jumboly.EzGdal.*.0.1.0.nupkg; do
      dotnet nuget push "$f" \
        --source https://api.nuget.org/v3/index.json \
        --api-key <YOUR_KEY>
    done
    ```
 
-4. インデックスされるまで数分待つと、誰でも `dotnet tool install -g Jumboly.EzGdal` または `Jumboly.EzGdal.<rid>` で入る。
+4. インデックスされるまで数分待つと、誰でも `dotnet tool install -g Jumboly.EzGdal.<rid>` で入る。
 
 注意:
 
-- **5 つの PackageId** が NuGet.org に予約されます:
-  - `Jumboly.EzGdal`（メタ、全 RID 入り、~186MB）
+- **4 つの PackageId** が NuGet.org に予約されます:
   - `Jumboly.EzGdal.osx-arm64`（~51MB）
   - `Jumboly.EzGdal.linux-x64`（~97MB）
   - `Jumboly.EzGdal.linux-arm64`（~97MB）
   - `Jumboly.EzGdal.win-x64`（~39MB）
-- すべて NuGet.org 上限 250MB に収まります。合計 push 量 ~470MB。
-- 展開サイズは A1 メタで ~920MB、A2 各 RID で ~250MB。
+- すべて NuGet.org 上限 250MB に収まります。合計 push 量 ~284MB。
+- 展開サイズは各 RID で ~250MB（`~/.dotnet/tools/.store/jumboly.ezgdal.<rid>/` 配下）。
 - **初回は v0.1.0 ではなく v1.0.0 から始めることを推奨**（pre-release 用には v0.1.0-alpha 等を使う）。csproj の `<Version>` を変更するか、pack 時に `-p:Version=1.0.0` で上書きしてください。
-- 5 つの ID すべてが NuGet.org で空いていることを事前確認してください（[nuget.org/packages/Jumboly.EzGdal](https://www.nuget.org/packages/Jumboly.EzGdal) 等）。
+- 4 つの ID すべてが NuGet.org で空いていることを事前確認してください。
 
 ### B. ポータブル単一バイナリ（.NET ランタイム不要）
 

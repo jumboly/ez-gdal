@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 GDAL を内包したワンバイナリ・ポータブル C# CLI ツール (.NET 10)。2 形態で配布する：
 
-1. **.NET global tool** — `dotnet tool install -g Jumboly.EzGdal[.<rid>]`、framework-dependent
+1. **.NET global tool** — `dotnet tool install -g Jumboly.EzGdal.<rid>`、framework-dependent
 2. **Self-contained single-file** — `dotnet publish -r <rid>` の出力（~84MB、.NET ランタイム不要）
 
 旧 GDAL EXE (`gdalinfo` / `gdal_translate` / `ogr2ogr` ほか 14 種) と argv 互換、加えて GDAL 3.12+ 統一 CLI (`gdal raster info` 等) も実行可能。MaxRev.Gdal NuGet (3.12.x) 経由で PMTiles 含む 200+ ドライバを内蔵。
@@ -22,7 +22,7 @@ GDAL を内包したワンバイナリ・ポータブル C# CLI ツール (.NET 
 ### ビルド・パック
 
 ```bash
-# global tool 用 RID 別 nupkg を 5 つ生成（osx-arm64 / linux-x64 / linux-arm64 / win-x64 + メタ）
+# global tool 用 RID 別 nupkg を 4 つ生成（osx-arm64 / linux-x64 / linux-arm64 / win-x64）
 ./scripts/pack-tool.sh
 
 # 1 つの RID のみ
@@ -115,7 +115,6 @@ return outDs == null ? ExitCode.Failure : ExitCode.Success;
 `src/EzGdal/EzGdal.csproj` の `_NeedMacArm64` / `_NeedLinux` / `_NeedWindows` プロパティが 3 つの呼び出しシナリオ（`PackTargetRid` 指定 / `RuntimeIdentifier` 指定 / dev-loop）から、必要な MaxRev runtime のみを選択する。
 
 - `dotnet pack -p:PackTargetRid=osx-arm64` → `Jumboly.EzGdal.osx-arm64`（51MB）
-- `dotnet pack -p:PackTargetRid=all` → メタパッケージ `Jumboly.EzGdal`（186MB、全 RID 入り）
 - `dotnet publish -r osx-arm64` → portable single-file（~84MB）
 - `dotnet build` → host RID のみ（dev-loop 高速）
 
