@@ -233,17 +233,17 @@ xattr -d com.apple.quarantine /path/to/ezgdal
 内蔵ドライバに含まれない GDAL ドライバを `.so / .dylib / .dll` プラグイン形式で追加できます。
 
 ```bash
-# プラグイン (例: ogr_GeoAccess.so) をユーザーローカルに配置
-ezgdal install-plugin /path/to/ogr_GeoAccess.so
+# プラグイン (例: ogr_MyDriver.so) をユーザーローカルに配置
+ezgdal install-plugin /path/to/ogr_MyDriver.so
 
 # 配置済みプラグインを一覧
 ezgdal list-plugins
 
 # 自動ロード確認
-ezgdal vector --formats | grep GeoAccess
+ezgdal vector --formats | grep MyDriver
 
 # 削除
-ezgdal remove-plugin ogr_GeoAccess.so
+ezgdal remove-plugin ogr_MyDriver.so
 ```
 
 配置先:
