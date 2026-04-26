@@ -45,7 +45,17 @@ OGR (vector) ドライバの最小例:
 ```cpp
 #include "ogrsf_frmts.h"
 
-extern "C" void CPL_DLL RegisterOGRMyDriver();
+// CPL_DLL は GDAL_COMPILATION を define しない plugin 文脈の MSVC では空マクロ
+// に展開されるため、Register 関数が DLL から export されない。Windows MSVC
+// では明示的に __declspec(dllexport) が必須。CMake 側で WINDOWS_EXPORT_ALL_SYMBOLS=ON
+// を設定する場合でも、source 側に書いておく方が contract が明確で安全。
+#ifdef _MSC_VER
+#  define MYDRIVER_EXPORT __declspec(dllexport)
+#else
+#  define MYDRIVER_EXPORT
+#endif
+
+extern "C" MYDRIVER_EXPORT void RegisterOGRMyDriver();
 
 void RegisterOGRMyDriver()
 {
@@ -160,6 +170,35 @@ set_target_properties(ogr_MyDriver PROPERTIES
 > プロセスに既にロード済みの `gdal.dll` から symbol が解決される。
 > プラグイン側に独自の `gdal.dll` を持ち込むと §4.1 (macOS/Linux と同じ)
 > driver manager 分裂を起こすので絶対にやらない。
+
+##### Windows SDK ヘッダ提供範囲と stub の限界
+
+`Jumboly.EzGdal.win-x64` 同梱の `sdk/include/gdal/` は GDAL upstream
+release tarball から `port/` `gcore/` `alg/` `ogr/` `ogr/ogrsf_frmts/`
+`frmts/` 直下の `.h` をフラットにコピーしたもの。以下は意図的に**含まない**:
+
+- **`*_p.h` (internal header)** — GDAL 内部 ABI に依存するためそもそも
+  Risky pattern (§4.5)。plugin から触らない
+- **`frmts/<driver>/` 配下のサブヘッダ** — 個別ドライバ実装の internal。
+  別ドライバの内部構造に依存する plugin は host minor バンプで容易に壊れる
+
+CMake configure 時に生成されるはずの 2 ヘッダは ezgdal が手書き stub を
+同梱している (MaxRev nupkg に成果物が無いため):
+
+- **`gdal_version.h`** — Major/Minor/Rev/RELEASE_NAME のみ。`GDAL_VERSION_BUILD`
+  / `GDAL_RELEASE_DATE` は埋め込まない。plugin 側でこれら 2 つを参照
+  していると compile エラー
+- **`cpl_config.h`** — Windows MSVC x64 (LLP64) 前提のハンドコード版。
+  `cpl_port.h` が unconditional に要求する `SIZEOF_INT` / `SIZEOF_UNSIGNED_LONG`
+  / `SIZEOF_VOIDP` / `SIZEOF_SIZE_T` / `CPL_STDCALL` のみ揃えている。
+  MaxRev が実際に build 時に指定した `HAVE_*` フラグ群とは厳密には一致
+  しない可能性があり、それらが public API に影響する稀ケースで plugin の
+  ABI が微妙にズレる。多くの define は `#ifdef GDAL_COMPILATION` で
+  囲まれ plugin から見えないため実害は低いが、ABI 起因の異常 (silent
+  crash / 構造体メモリレイアウト不整合) を踏んだ場合はここを最初に疑う。
+
+詳細は [`scripts/win-sdk/README.md`](../scripts/win-sdk/README.md) の
+「既知の制限」を参照。
 
 ### 4.2 関数ポインタ (`pfnIdentify` / `pfnOpen` など) の代入
 
@@ -294,6 +333,49 @@ GDAL の `--formats` print loop は `nOptions` で raster/vector を絞り込む
 ezgdal は applet 名 (gdalinfo / ogrinfo / ...) から自動で適切な `nOptions` を
 渡すが、プラグイン側で `DCAP_VECTOR` / `DCAP_RASTER` のいずれも未設定だと
 どの applet からも見えない。
+
+### Windows 固有の診断
+
+#### `Can't find requested entry point: RegisterOGR<Name>`
+
+GDAL plugin loader が DLL を開けたが entry point を見つけられなかった。
+原因のほぼ全て: **plugin の Register 関数が DLL から export されていない**。
+`CPL_DLL` は plugin 文脈の MSVC では空マクロに展開され、export されない。
+§3 の minimal example のように明示的な `__declspec(dllexport)` を付けるか、
+CMake 側で `WINDOWS_EXPORT_ALL_SYMBOLS=ON` を設定する。
+
+実際に export されているかは `dumpbin /exports` で確認:
+
+```powershell
+dumpbin /exports ogr_MyDriver.dll
+# 出力に RegisterOGRMyDriver が ordinal 付きで載っていれば OK
+```
+
+#### plugin loader が DLL を見ない
+
+```powershell
+$env:CPL_DEBUG = "ON"
+ezgdal ogrinfo --formats 2>&1 | Select-String -Pattern "GDAL: Auto register|GDAL_DRIVER_PATH"
+Remove-Item Env:CPL_DEBUG
+```
+
+- `GDAL: Auto register C:\...\ogr_MyDriver.dll using RegisterOGRMyDriver.` が
+  出れば loader は plugin を認識・register 関数の呼び出しに成功している
+- 何も出ない場合: `ezgdal list-plugins` で `%APPDATA%\ezgdal\plugins\` 配置を
+  確認、ファイル名 prefix (`ogr_` / `gdal_`) を確認
+
+#### compile エラー: `Cannot open include file: 'cpl_config.h'`
+
+ezgdal の SDK (sdk/include/gdal/) を CMake の include path に正しく渡せて
+いない。`find_package(EzGdalSdk)` 経由なら `EzGdalSdk::gdal` ターゲットの
+`INTERFACE_INCLUDE_DIRECTORIES` で自動解決されるので、`target_link_libraries`
+で `EzGdalSdk::gdal` をリンクしているか確認 (§4.1 の CMake snippet 参照)。
+
+#### compile エラー: `GDAL_VERSION_BUILD` / `GDAL_RELEASE_DATE` 未定義
+
+ezgdal SDK 同梱の `gdal_version.h` はこの 2 つを埋め込まない (§4.1 末尾の
+stub 制限を参照)。plugin で参照しないか、自前で `#ifndef ... #define`
+のフォールバックを書く。
 
 ## 8. 参考
 
