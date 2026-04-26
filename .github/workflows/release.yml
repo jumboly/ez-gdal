@@ -147,11 +147,14 @@ jobs:
           $dummyDll = "verify\DummyPlugin\build\Release\ogr_Dummy.dll"
           if (-not (Test-Path $dummyDll)) { throw "ogr_Dummy.dll not built at $dummyDll" }
 
-          # autoload smoke
+          # autoload smoke。stderr も取り込み (entry-point 解決失敗等を可視化)。
+          # `Select-String -Quiet` を使って null/空配列でも安全に判定する。
           .\tool-test\ezgdal install-plugin $dummyDll
-          $formats = .\tool-test\ezgdal ogrinfo --formats
-          if ($formats -notmatch "Dummy") {
-              Write-Host $formats
+          $formats = (.\tool-test\ezgdal ogrinfo --formats 2>&1) -join "`n"
+          Write-Host "--- ogrinfo --formats (stdout+stderr) ---"
+          Write-Host $formats
+          Write-Host "------------------------------------------"
+          if (-not ($formats | Select-String -Pattern '^\s*Dummy\s+-' -Quiet)) {
               throw "Dummy driver not visible after install-plugin"
           }
           Write-Host "=== Windows SDK end-to-end OK ==="

@@ -19,6 +19,13 @@ if(WIN32)
     list(APPEND CMAKE_PREFIX_PATH "$ENV{EZGDAL_SDK_DIR}/cmake")
     find_package(EzGdalSdk REQUIRED)
     target_link_libraries(ogr_Dummy PRIVATE EzGdalSdk::gdal)
+
+    # CPL_DLL は GDAL_COMPILATION を define していない plugin 文脈の
+    # MSVC では空マクロに展開されるため、RegisterOGRDummy が DLL から
+    # export されない。WINDOWS_EXPORT_ALL_SYMBOLS で extern "C" 関数を
+    # 自動的に .def 経由で全 export させ、GDAL の AutoLoadDrivers が
+    # entry point を見つけられるようにする。
+    set_target_properties(ogr_Dummy PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
 else()
     # macOS / Linux は host にインストールされた GDAL のヘッダだけ使ってビルドする。
     # ライブラリへの explicit link は行わず、libgdal の symbol は host

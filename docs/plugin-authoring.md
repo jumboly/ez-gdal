@@ -142,7 +142,14 @@ add_library(ogr_MyDriver MODULE ogrmydriver.cpp)
 list(APPEND CMAKE_PREFIX_PATH "$ENV{EZGDAL_SDK_DIR}/cmake")
 find_package(EzGdalSdk REQUIRED)
 target_link_libraries(ogr_MyDriver PRIVATE EzGdalSdk::gdal)
-set_target_properties(ogr_MyDriver PROPERTIES PREFIX "" SUFFIX ".dll")
+set_target_properties(ogr_MyDriver PROPERTIES
+    PREFIX ""
+    SUFFIX ".dll"
+    # CPL_DLL は plugin 文脈 (GDAL_COMPILATION 未定義) の MSVC では空マクロに
+    # 展開されるため、RegisterOGRMyDriver が DLL から export されない。
+    # 全 extern "C" 関数を自動 export する以下の設定が必要 (推奨)。
+    WINDOWS_EXPORT_ALL_SYMBOLS ON
+)
 ```
 
 完全に動く例は [`verify/DummyPlugin/CMakeLists.txt`](../verify/DummyPlugin/CMakeLists.txt)
