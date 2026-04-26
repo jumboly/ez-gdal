@@ -19,6 +19,8 @@ internal static class NativeExecutablePath
                 return GetMac();
             if (OperatingSystem.IsLinux())
                 return GetLinux();
+            if (OperatingSystem.IsWindows())
+                return GetWindows();
         }
         catch
         {
@@ -47,5 +49,15 @@ internal static class NativeExecutablePath
         var raw = File.ReadAllBytes("/proc/self/cmdline");
         var nul = Array.IndexOf(raw, (byte)0);
         return nul > 0 ? Encoding.UTF8.GetString(raw, 0, nul) : null;
+    }
+
+    static string? GetWindows()
+    {
+        // Windows .NET tool では Environment.GetCommandLineArgs()[0] が managed
+        // entry assembly (`ezgdal.dll`) を返してしまうため applet 解決に使えない。
+        // ProcessPath は内部的に GetModuleFileName(NULL) で apphost の .exe パスを
+        // 取り、symlink (Dev Mode 有効時) も copy 経路 (gdalinfo.exe 等) も
+        // ユーザーが叩いたファイル名そのままを返す。
+        return Environment.ProcessPath;
     }
 }
