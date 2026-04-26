@@ -7,10 +7,19 @@ internal static class Program
 {
     static int Main(string[] args)
     {
+        var appName = ResolveAppName();
+
+        // completion は GDAL native を一切触らないため Bootstrap.Initialize() を
+        // skip して即座に出力する。eval "$(ezgdal completion bash)" 等を rc に
+        // 書く運用ではこれがインタラクティブシェル起動の hot path に乗り、
+        // ConfigureAll() の ~100-500ms オーバーヘッドが体感に効くため。
+        if (appName is "ezgdal" or "gdal" && args.Length >= 1 && args[0] == "completion")
+            return CompletionApplet.Run(args[1..]);
+
         try
         {
             Bootstrap.Initialize();
-            return Dispatch(ResolveAppName(), args);
+            return Dispatch(appName, args);
         }
         catch (ApplicationException)
         {
@@ -64,6 +73,7 @@ internal static class Program
                 return ListPluginsApplet.Run(args[1..]);
             if (args[0] == "remove-plugin")
                 return RemovePluginApplet.Run(args[1..]);
+            // completion は Main() で Bootstrap 前に早期 return 済み
 
             // `ezgdal gdalinfo ...` 経由でも Dispatch と同じ前処理を適用 (--formats フィルタの applet 別 nOptions が効くように)。
             if (AppletRegistry.Dispatchers.TryGetValue(args[0], out var legacyHandler))

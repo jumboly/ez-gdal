@@ -60,6 +60,22 @@ dotnet tool install --tool-path ./tool-test --add-source ./nupkg Jumboly.EzGdal.
 dotnet run --project verify/DriverProbe/DriverProbe.csproj
 ```
 
+### シェル補完の再生成 (GDAL バンプ時)
+
+`scripts/completions/` 配下の bash/zsh/fish/PowerShell 補完スクリプトは静的添付方式で、GDAL 統一 CLI ツリーをハードコードしている。MaxRev.Gdal を上げたら 3 ステップで追従する：
+
+```bash
+# 1. gdal --json-usage を data/usage-en.json に再抽出 (system gdal を使う、要 jq)
+./scripts/completions/tools/extract.sh
+
+# 2. 前回スナップショットと diff し、変化分のみ Claude API で日本語訳
+export ANTHROPIC_API_KEY=sk-ant-...
+uv run --project scripts/completions/tools scripts/completions/tools/translate-diff.py
+
+# 3. 4 シェル分の補完スクリプトを再生成 + bash/zsh/fish の syntax check
+uv run --project scripts/completions/tools scripts/completions/tools/compile.py
+```
+
 NuGet.org への push（メンテナ向け）は `docs/release.md` を参照。
 
 ## ドキュメント
@@ -70,6 +86,7 @@ NuGet.org への push（メンテナ向け）は `docs/release.md` を参照。
 - `docs/external-plugin-support.md` — 外部プラグイン対応の検討時に整理した経緯 (実装済み)。実装方針 A/B/C のうち B 相当を採用
 - `verify/DriverProbe/` — MaxRev.Gdal の機能確認スタンドアロン（前述）
 - `verify/DummyPlugin/` — install-plugin / list-plugins / remove-plugin 動作確認用の最小 OGR ドライバ (`ogr_Dummy.so`)。CMake で host GDAL (Homebrew / apt) に対してビルド
+- `scripts/completions/README.md` — bash/zsh/fish/PowerShell 補完スクリプトの導入手順 (ユーザー向け) と再生成手順 (メンテナ向け)
 
 ## アーキテクチャ
 
@@ -144,6 +161,21 @@ return outDs == null ? ExitCode.Failure : ExitCode.Success;
 
 `GDALPrintDriverList` は `nOptions==0` を `OF_RASTER` に変換するため、SWIG 経由で 0 を渡すとデフォルト raster only になり、vector-only の外部プラグイン (`DCAP_VECTOR=YES` のみ) が `ogrinfo --formats` でも見えなくなる罠がある。
 
+### シェル補完 (`scripts/completions/`)
+
+GDAL 3.12+ 統一 CLI ツリー (`ezgdal raster info` / `ezgdal vector convert` 等、119 ノード) を 4 シェル分の補完スクリプトに展開する。生成は `scripts/completions/tools/` の Python パイプラインが担い、生成物 `ezgdal.{bash,zsh,fish,ps1}` は `src/EzGdal/EzGdal.csproj` が `<EmbeddedResource>` で assembly に埋め込む。実行時は `Applets/CompletionApplet.cs` が `LogicalName` キーで取り出して stdout にバイト列のまま流すだけで、補完ロジック自体には触らない (`ezgdal completion <bash|zsh|fish|powershell>`)。
+
+3 段階のデータパイプライン:
+
+- `tools/extract.sh` — `gdal --json-usage` を `data/usage-en.json` に保存 (system gdal を使う。ezgdal 自身は root algorithm の `--json-usage` 経路を持たないため)
+- `tools/translate-diff.py` — `data/usage-en.snapshot.json` と diff し、新規・変更ノードのみ Claude API でバッチ翻訳して `data/usage-ja.json` を更新。終了時に snapshot を refresh
+- `tools/compile.py` — `data/` を読んで `ezgdal.{bash,zsh,fish,ps1}` を再生成。en / ja 両方を埋め込み、`LANG`/`LC_ALL`/`LC_MESSAGES` (PowerShell は `CurrentCulture`) で実行時に切替
+- `tools/common.py` — `walk_tree` / `normalize_oneline` を compile.py / translate-diff.py で共有
+
+**en と ja を分離する理由**: GDAL バンプで構造ごと変わる en は丸ごと再抽出、ja は変わらない部分を温存して新規・変更分だけ LLM へ送る。これで翻訳コストと品質ブレを抑える。手で直した日本語は次回バンプでも保たれる (snapshot との diff に乗らないため)。
+
+bash は `complete -F` の制約で説明文を出さず候補名のみ。zsh / fish / PowerShell は en/ja 両テーブルから locale で選んで説明付き候補を出す。
+
 ### NuGet パッケージング設計
 
 `src/EzGdal/EzGdal.csproj` の `_NeedMacArm64` / `_NeedMacX64` / `_NeedLinuxX64` / `_NeedLinuxArm64` / `_NeedWindows` プロパティが 3 つの呼び出しシナリオ（`PackTargetRid` 指定 / `RuntimeIdentifier` 指定 / dev-loop）から、必要な MaxRev runtime のみを選択する。MaxRev は OS×arch 単位で別 NuGet パッケージを公開しているので、ezgdal も RID と 1:1 で揃え、各 nupkg には自分の RID 分の native だけを入れる。
@@ -160,9 +192,11 @@ return outDs == null ? ExitCode.Failure : ExitCode.Success;
 - **`InvariantGlobalization=true`（csproj） + Bootstrap で CurrentCulture 固定**。小数点コンマ等で GeoTransform / WKT が壊れる事故を防ぐ
 - **Native AOT は採用しない**。MaxRev の SWIG バインディングは reflection を多用するため
 - **Applet 名のリストは `AppletRegistry.Dispatchers` のみが信頼ソース**。Program / InstallApplets / UnknownApplet の各所はそこから派生させる
+- **シェル補完の生成データは `scripts/completions/` に閉じる**。C# 本体は `Applets/CompletionApplet.cs` が `<EmbeddedResource>` を stdout に流すだけで、補完ロジック (シェル別の `complete` / `_arguments` / `Register-ArgumentCompleter` 構文) は触らず Python の `compile.py` で再生成する。`data/*.json` と生成物 `ezgdal.{bash,zsh,fish,ps1}` の両方をコミット対象にし、後者は csproj から `LogicalName="EzGdal.completions.ezgdal.<ext>"` で参照する。エンドユーザーは uv も `ANTHROPIC_API_KEY` も持たない前提
 
 ## 既知の制限
 
 - 起動オーバーヘッド ~100-500ms（.NET ランタイム + ネイティブ展開）。シェルスクリプトで多重ループ起動する用途では本物 GDAL EXE のほうが高速
 - `gdalmanage` は GDAL に C API がなく未対応（`ezgdal vsi list` / `vsi copy` 等で代替推奨）
 - Windows での外部プラグインは β サポート (`docs/plugin-authoring.md` §4.1)。macOS / Linux はリンク時 `-undefined dynamic_lookup` / `--allow-shlib-undefined` でホスト libgdal にシンボル解決を委ねられるが、Windows DLL は同等手段がなく ezgdal 同梱 libgdal の import library が必要
+- bash 補完は bash 4+ 必須 (連想配列 `declare -A` を使うため、macOS の system bash 3.2 では何もしない)。シェル補完の対象は GDAL 3.12+ 統一 CLI ツリーのみ — legacy applet (`gdalinfo` / `ogr2ogr` 等) の単独補完は提供しない

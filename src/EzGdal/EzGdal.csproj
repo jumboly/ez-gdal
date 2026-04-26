@@ -100,6 +100,19 @@
     <_NeedWindows Condition="'$(_DevLoop)' == 'true' And $([MSBuild]::IsOSPlatform('Windows'))">true</_NeedWindows>
   </PropertyGroup>
 
+  <!--
+       生成済みシェル補完スクリプトを assembly に埋め込む。CompletionApplet が
+       LogicalName で取り出して stdout にバイト列のまま流す。global tool /
+       single-file 配布のユーザーがリポジトリへのパスを知らなくても
+       `ezgdal completion <shell>` で導入できるようにするため。
+  -->
+  <ItemGroup>
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)..\..\scripts\completions\ezgdal.bash" LogicalName="EzGdal.completions.ezgdal.bash" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)..\..\scripts\completions\ezgdal.zsh"  LogicalName="EzGdal.completions.ezgdal.zsh" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)..\..\scripts\completions\ezgdal.fish" LogicalName="EzGdal.completions.ezgdal.fish" />
+    <EmbeddedResource Include="$(MSBuildThisFileDirectory)..\..\scripts\completions\ezgdal.ps1"  LogicalName="EzGdal.completions.ezgdal.ps1" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="MaxRev.Gdal.Core" Version="3.12.3.499" />
     <PackageReference Include="MaxRev.Gdal.MacosRuntime.Minimal.arm64" Version="3.12.2.472" Condition="'$(_NeedMacArm64)' == 'true'" />

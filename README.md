@@ -68,7 +68,29 @@ PATH に通せば即使えます。設定ファイルも環境変数も不要。
 
 ## 使い方
 
-統一 CLI のサブコマンドツリー全体は `ezgdal raster <TAB>` / `ezgdal vector <TAB>` で引けます。
+統一 CLI のサブコマンドツリー全体は `ezgdal raster <TAB>` / `ezgdal vector <TAB>` で引けます (シェル補完を有効にした場合)。
+
+### シェル補完を有効化する
+
+補完スクリプト (bash 4+ / zsh / fish / PowerShell) は ezgdal バイナリに内蔵されています。`ezgdal completion <shell>` で stdout に出力できるので、各シェルの初期化スクリプトに 1 行追加するだけで有効化できます (rc ファイルには `eval` 行が入るだけで補完スクリプト本体は展開されないため肥大化しません)。
+
+```bash
+# bash (4+)
+echo 'eval "$(ezgdal completion bash)"' >> ~/.bashrc && source ~/.bashrc
+
+# zsh
+echo 'eval "$(ezgdal completion zsh)"' >> ~/.zshrc && source ~/.zshrc
+
+# fish
+echo 'ezgdal completion fish | source' >> ~/.config/fish/config.fish && source ~/.config/fish/config.fish
+
+# PowerShell
+Add-Content $PROFILE 'ezgdal completion powershell | Out-String | Invoke-Expression'; . $PROFILE
+```
+
+末尾の `source` / `. $PROFILE` で現在のセッションでも即時有効化されます (新規シェル起動時は次回から自動的に読み込まれます)。
+
+ロケール切替 (`LANG=ja_JP.UTF-8` で説明文を日本語化) など詳細は [scripts/completions/README.md](scripts/completions/README.md) を参照。
 
 ### よく使う raster 操作
 
