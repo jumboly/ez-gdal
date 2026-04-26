@@ -16,9 +16,6 @@
   <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX')) And '$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture)' == 'Arm64'">
     <PackageReference Include="MaxRev.Gdal.MacosRuntime.Minimal.arm64" Version="3.12.3.499" />
   </ItemGroup>
-  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX')) And '$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture)' == 'X64'">
-    <PackageReference Include="MaxRev.Gdal.MacosRuntime.Minimal.x64" Version="3.12.3.499" />
-  </ItemGroup>
   <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Linux')) And '$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture)' == 'X64'">
     <PackageReference Include="MaxRev.Gdal.LinuxRuntime.Minimal.x64" Version="3.12.3.499" />
   </ItemGroup>

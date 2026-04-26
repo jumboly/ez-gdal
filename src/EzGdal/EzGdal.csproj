@@ -16,7 +16,6 @@
        PackageId is split per-RID so each consumer downloads only their own
        platform's native binaries. PackTargetRid selects which package to build:
          dotnet pack -p:PackTargetRid=osx-arm64
-         dotnet pack -p:PackTargetRid=osx-x64
          dotnet pack -p:PackTargetRid=linux-x64
          dotnet pack -p:PackTargetRid=linux-arm64
          dotnet pack -p:PackTargetRid=win-x64
@@ -39,7 +38,6 @@
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
 
     <PackageId Condition="'$(PackTargetRid)' == 'osx-arm64'">Jumboly.EzGdal.osx-arm64</PackageId>
-    <PackageId Condition="'$(PackTargetRid)' == 'osx-x64'">Jumboly.EzGdal.osx-x64</PackageId>
     <PackageId Condition="'$(PackTargetRid)' == 'linux-x64'">Jumboly.EzGdal.linux-x64</PackageId>
     <PackageId Condition="'$(PackTargetRid)' == 'linux-arm64'">Jumboly.EzGdal.linux-arm64</PackageId>
     <PackageId Condition="'$(PackTargetRid)' == 'win-x64'">Jumboly.EzGdal.win-x64</PackageId>
@@ -86,10 +84,6 @@
     <_NeedMacArm64 Condition="'$(PackTargetRid)' == 'osx-arm64' Or '$(RuntimeIdentifier)' == 'osx-arm64'">true</_NeedMacArm64>
     <_NeedMacArm64 Condition="'$(_DevLoop)' == 'true' And $([MSBuild]::IsOSPlatform('OSX')) And '$(_HostIsArm64)' == 'True'">true</_NeedMacArm64>
 
-    <_NeedMacX64>false</_NeedMacX64>
-    <_NeedMacX64 Condition="'$(PackTargetRid)' == 'osx-x64' Or '$(RuntimeIdentifier)' == 'osx-x64'">true</_NeedMacX64>
-    <_NeedMacX64 Condition="'$(_DevLoop)' == 'true' And $([MSBuild]::IsOSPlatform('OSX')) And '$(_HostIsArm64)' == 'False'">true</_NeedMacX64>
-
     <_HostIsX64>$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().Equals('X64'))</_HostIsX64>
 
     <_NeedLinuxX64>false</_NeedLinuxX64>
@@ -121,7 +115,6 @@
   <ItemGroup>
     <PackageReference Include="MaxRev.Gdal.Core" Version="3.12.3.499" />
     <PackageReference Include="MaxRev.Gdal.MacosRuntime.Minimal.arm64" Version="3.12.3.499" Condition="'$(_NeedMacArm64)' == 'true'" />
-    <PackageReference Include="MaxRev.Gdal.MacosRuntime.Minimal.x64"   Version="3.12.3.499" Condition="'$(_NeedMacX64)' == 'true'" />
     <PackageReference Include="MaxRev.Gdal.LinuxRuntime.Minimal.x64"   Version="3.12.3.499" Condition="'$(_NeedLinuxX64)' == 'true'" />
     <PackageReference Include="MaxRev.Gdal.LinuxRuntime.Minimal.arm64" Version="3.12.3.499" Condition="'$(_NeedLinuxArm64)' == 'true'" />
     <PackageReference Include="MaxRev.Gdal.WindowsRuntime.Minimal"     Version="3.12.3.499" Condition="'$(_NeedWindows)' == 'true'" />

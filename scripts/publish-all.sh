@@ -6,7 +6,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PROJECT="$ROOT/src/EzGdal/EzGdal.csproj"
 
-RIDS=(win-x64 linux-x64 osx-x64 osx-arm64)
+RIDS=(win-x64 linux-x64 osx-arm64)
 ONLY="${1:-}"
 
 for rid in "${RIDS[@]}"; do

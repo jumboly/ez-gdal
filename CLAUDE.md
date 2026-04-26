@@ -22,14 +22,14 @@ GDAL を内包したワンバイナリ・ポータブル C# CLI ツール (.NET 
 ### ビルド・パック
 
 ```bash
-# global tool 用 RID 別 nupkg を 5 つ生成（osx-arm64 / osx-x64 / linux-x64 / linux-arm64 / win-x64）
+# global tool 用 RID 別 nupkg を 4 つ生成（osx-arm64 / linux-x64 / linux-arm64 / win-x64）
 ./scripts/pack-tool.sh
 
 # 1 つの RID のみ
 ./scripts/pack-tool.sh osx-arm64
 
 # Self-contained portable single-file
-./scripts/publish-all.sh             # 4 RID（win-x64 / linux-x64 / osx-x64 / osx-arm64）
+./scripts/publish-all.sh             # 3 RID（win-x64 / linux-x64 / osx-arm64）
 ./scripts/publish-all.sh osx-arm64   # 1 つの RID
 
 # 通常の dev-loop ビルド（host platform のみ MaxRev runtime を restore）
@@ -178,12 +178,14 @@ bash は `complete -F` の制約で説明文を出さず候補名のみ。zsh / 
 
 ### NuGet パッケージング設計
 
-`src/EzGdal/EzGdal.csproj` の `_NeedMacArm64` / `_NeedMacX64` / `_NeedLinuxX64` / `_NeedLinuxArm64` / `_NeedWindows` プロパティが 3 つの呼び出しシナリオ（`PackTargetRid` 指定 / `RuntimeIdentifier` 指定 / dev-loop）から、必要な MaxRev runtime のみを選択する。MaxRev は OS×arch 単位で別 NuGet パッケージを公開しているので、ezgdal も RID と 1:1 で揃え、各 nupkg には自分の RID 分の native だけを入れる。
+`src/EzGdal/EzGdal.csproj` の `_NeedMacArm64` / `_NeedLinuxX64` / `_NeedLinuxArm64` / `_NeedWindows` プロパティが 3 つの呼び出しシナリオ（`PackTargetRid` 指定 / `RuntimeIdentifier` 指定 / dev-loop）から、必要な MaxRev runtime のみを選択する。MaxRev は OS×arch 単位で別 NuGet パッケージを公開しているので、ezgdal も RID と 1:1 で揃え、各 nupkg には自分の RID 分の native だけを入れる。
 
 - `dotnet pack -p:PackTargetRid=osx-arm64` → `Jumboly.EzGdal.osx-arm64`（~51MB）
 - `dotnet pack -p:PackTargetRid=linux-x64` → `Jumboly.EzGdal.linux-x64`（~50MB、x64 native のみ）
 - `dotnet publish -r osx-arm64` → portable single-file（~84MB）
 - `dotnet build` → host RID のみ（dev-loop 高速）
+
+Intel Mac (osx-x64) は GitHub Actions の macos-13 runner が deprecation/queue 待ちで verify が安定しないため公開対象外（v1.0.0 から）。
 
 ## 設計上の不変条件
 

@@ -9,6 +9,7 @@
 /tool-test/
 /verify/DummyPlugin/build/
 /.scratch/
+/.claude/
 
 # dotenv files
 .env
