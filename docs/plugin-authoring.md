@@ -125,6 +125,55 @@ ezgdal 配布物内の `gdal.lib` (import library) にリンクするか、ezgda
 代入を避け、メタデータ API (`SetMetadataItem`) のみで構成し、Open ハンドラ
 は別途登録 API (例: `SetOpenCallback` など) があれば利用する。
 
+### 4.3 Linux の C++ stdlib ABI
+
+Linux ではプラグインの C++ stdlib 選択が host と一致している必要がある。
+MaxRev.Gdal の Linux runtime は `libstdc++` (GNU) でビルドされているため、
+プラグイン側も `libstdc++` でビルドすること。`clang++ -stdlib=libc++` で
+ビルドするとプロセス内に libc++ と libstdc++ の両方がロードされ、
+`std::string` / `std::vector` 等の layout 不一致で silent crash しうる。
+
+加えて GLIBCXX dual ABI (`_GLIBCXX_USE_CXX11_ABI=0/1`) は libstdc++ を
+共有するライブラリ間で揃っている必要がある。デフォルトの `=1` のままで
+ビルドすれば現代の Linux ディストリでは概ね一致するが、古いツールチェイン
+で `=0` を強制している環境ではプラグイン側も同じ設定にすること。
+
+### 4.4 GEOS / PROJ などの転送依存ライブラリ
+
+プラグインから GEOS / PROJ / SQLite などを **直接リンクして使うのは避ける**。
+host (ezgdal 内蔵 MaxRev libgdal) は自身のバージョンの GEOS/PROJ を bundle
+しており、プラグインが別バージョンの GEOS にリンクするとプロセス内に 2 つの
+GEOS がロードされ、両方を跨ぐオブジェクトの取り回しで crash する。
+
+幾何処理が必要な場合は GDAL の API (`OGRGeometry::Buffer` / `Transform`
+等) 経由で host の GEOS を間接的に使うこと。これらは GDAL の C++ ABI を
+通すため、§4.1 / §4.2 の制約を超える追加リスクを生まない。
+
+### 4.5 Safe pattern と Risky pattern
+
+以下を「Safe」(高確率で動く) と「Risky」(要十分なテスト) で分類する。Safe
+側に収まっているプラグインは本書に従っていれば実用上問題ないが、Risky 側
+に踏み込むなら ABI 互換の現物確認 (実機での open / read / 数件の代表的な
+データ処理) を必ず行うこと。
+
+| 分類 | 内容 |
+|---|---|
+| **Safe** | (1) `GetGDALDriverManager()->RegisterDriver()` で driver を登録し、`SetMetadataItem` でメタデータを与えるだけ |
+|   | (2) `pfnIdentify` / `pfnOpen` のみ設定し、コールバック内では C API (`GDALOpenInfo` の getter / `OGRSFDriverRegistrar`) を経由 |
+|   | (3) GEOS / PROJ を直接使わず、必要なら GDAL 経由 (`OGRGeometry::Buffer` 等) |
+|   | (4) 自前の `GDALDataset` / `OGRLayer` 派生クラスは保持するが、フィールドはプリミティブ + `std::unique_ptr` 程度に留める |
+| **Risky** | (1) `GDALDataset` / `OGRLayer` を継承し多数の virtual 関数を override (vtable 互換が ABI 全域に依存) |
+|   | (2) `std::string` / `std::vector` / `std::map` を引数・戻り値に取る GDAL 内部 API (`CPLString` 系を含む) を多用 |
+|   | (3) GEOS / PROJ / SQLite を直接リンク (§4.4 参照) |
+|   | (4) GDAL の inline テンプレート (`OGRSpatialReference` の一部メソッド等) を多用、ODR 違反のリスクあり |
+|   | (5) GDAL の private header (`gdal_priv.h` の一部、`ogr_p.h` 等) を使用 |
+
+シンプルなフォーマット reader (独自バイナリの Identify + Open + 行を
+yield) は Safe、CRS 変換 + 幾何加工 + ストリーミングを行う高機能な
+driver は Risky。Risky 寄りの実装をする場合は `verify/DummyPlugin/` を
+雛形に、必要な機能を最小限ずつ追加し、各段階で `ezgdal ogrinfo --formats`
++ 実データ open のスモークテストを通すこと。
+
 ## 5. インストールと自動ロード
 
 ユーザーは `ezgdal install-plugin <ファイル>` で以下のディレクトリに配置する:
@@ -185,6 +234,11 @@ GDAL の `--formats` フィルタは applet ごとに表示対象を絞る:
   確認。host と異なる libgdal への絶対パス依存があれば §4.1 の手順で除去
 - 内蔵 GDAL のバージョン (`ezgdal gdalinfo --version`) と
   プラグインビルド時の GDAL バージョンの minor が一致するか確認
+- Linux で libc++ / libstdc++ が混在していないか確認 (§4.3)
+- GEOS / PROJ / SQLite の重複ロード (host と plugin が別バージョンを持ち込んで
+  いないか) を `otool -L` / `ldd` で確認 (§4.4)
+- 上記をすべて満たしてもなお crash する場合、§4.5 の Risky pattern に該当
+  しないか確認
 
 ### `--format <name>` は通るが `--formats` で出ない
 
