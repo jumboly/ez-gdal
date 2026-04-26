@@ -29,7 +29,7 @@ GDAL を内包したワンバイナリ・ポータブル C# CLI ツール (.NET 
 ./scripts/pack-tool.sh osx-arm64
 
 # Self-contained portable single-file
-./scripts/publish-all.sh             # 全 RID
+./scripts/publish-all.sh             # 4 RID（win-x64 / linux-x64 / osx-x64 / osx-arm64）
 ./scripts/publish-all.sh osx-arm64   # 1 つの RID
 
 # 通常の dev-loop ビルド（host platform のみ MaxRev runtime を restore）
@@ -81,7 +81,7 @@ Main(args)                              [Program.cs]
   │   ├─ ApplyUserPluginPath()                   ※ ConfigureAll 前に SetConfigOption
   │   │     └─ PluginPaths.GetUserPluginDir() を GDAL_DRIVER_PATH に追加
   │   ├─ GdalBase.ConfigureAll()                 ※ MaxRev が GDAL native を初期化
-  │   ├─ Gdal.DontUseExceptions()                ※ legacy EXE と挙動を揃える
+  │   ├─ Gdal.DontUseExceptions() / Ogr.DontUseExceptions()  ※ legacy EXE と挙動を揃える
   │   └─ ProcessExit / CancelKeyPress に Cleanup を登録
   │
   ├─ ResolveAppName()                   [Program.cs + Util/NativeExecutablePath.cs]

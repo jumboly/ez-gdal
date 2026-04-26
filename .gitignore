@@ -3,11 +3,10 @@
 ##
 ## Get latest from `dotnet new gitignore`
 
-# ez-gdal: 配布物・検証用ディレクトリ・空のプレースホルダ
+# ez-gdal: 配布物・検証用ディレクトリ
 /nupkg/
 /publish/
 /tool-test/
-/licenses/
 /verify/DummyPlugin/build/
 
 # dotenv files

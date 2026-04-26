@@ -40,8 +40,16 @@
     <PackageId Condition="'$(PackTargetRid)' == ''">Jumboly.EzGdal.dev</PackageId>
   </PropertyGroup>
 
+  <!--
+       LICENSE と licenses/ を nupkg に同梱する。これにより global tool で
+       インストールしたユーザーが、追加のネット接続なしに ezgdal 自体と
+       同梱 third-party ライブラリのライセンスを参照できる。
+       glob は今後 NOTICE / LGPL.txt 等を追加できるよう **/* を使う。
+  -->
   <ItemGroup Condition="'$(PackAsTool)' == 'true'">
     <None Include="$(MSBuildThisFileDirectory)..\..\README.md" Pack="true" PackagePath="\" />
+    <None Include="$(MSBuildThisFileDirectory)..\..\LICENSE" Pack="true" PackagePath="\" />
+    <None Include="$(MSBuildThisFileDirectory)..\..\licenses\**\*" Pack="true" PackagePath="licenses\" />
   </ItemGroup>
 
   <!--
