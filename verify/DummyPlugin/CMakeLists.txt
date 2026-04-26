@@ -42,8 +42,8 @@ endif()
 # (.so / .dylib / .dll) からドライバを発見する。Windows は .dll、
 # それ以外は .so に固定 (macOS の plugin loader は .so / .dylib 両方を
 # スキャンするので .so で良い)。lib プレフィックスは外す。
+set(_OGR_SUFFIX ".so")
 if(WIN32)
-    set_target_properties(ogr_Dummy PROPERTIES PREFIX "" SUFFIX ".dll")
-else()
-    set_target_properties(ogr_Dummy PROPERTIES PREFIX "" SUFFIX ".so")
+    set(_OGR_SUFFIX ".dll")
 endif()
+set_target_properties(ogr_Dummy PROPERTIES PREFIX "" SUFFIX "${_OGR_SUFFIX}")

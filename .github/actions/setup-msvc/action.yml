@@ -1,0 +1,35 @@
+name: Setup MSVC env
+description: |
+  windows-2022 runner で MSVC 開発環境 (cl / dumpbin / lib / link) を後続 step に
+  公開する。vswhere で最新 VS を解決し Enter-VsDevShell が立てる env (PATH /
+  INCLUDE / LIB ほか) を GITHUB_ENV 経由で次 step に引き継ぐ。
+
+inputs:
+  arch:
+    description: target architecture (x64 / x86 / arm64)
+    required: false
+    default: x64
+
+runs:
+  using: composite
+  steps:
+    - shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+
+        # Enter-VsDevShell が追加・変更する env のみを GITHUB_ENV に書きたいので
+        # 呼び出し前後でスナップショットを取って差分のみ propagate する。
+        $before = @{}
+        Get-ChildItem env: | ForEach-Object { $before[$_.Name] = $_.Value }
+
+        $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+        $vsInstall = & $vswhere -latest -property installationPath
+        if (-not $vsInstall) { throw "Visual Studio not found via vswhere" }
+        Import-Module (Join-Path $vsInstall 'Common7\Tools\Microsoft.VisualStudio.DevShell.dll')
+        Enter-VsDevShell -VsInstallPath $vsInstall -DevCmdArguments "-arch=${{ inputs.arch }} -no_logo" -SkipAutomaticLocation
+
+        Get-ChildItem env: | ForEach-Object {
+            if ($before[$_.Name] -ne $_.Value) {
+                "$($_.Name)=$($_.Value)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+            }
+        }

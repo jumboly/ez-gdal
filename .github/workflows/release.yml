@@ -55,21 +55,21 @@ jobs:
           Write-Host "tag=$tag csproj=$csver"
           if ($tag -ne $csver) { throw "version mismatch" }
 
+      - uses: ./.github/actions/setup-msvc
+
       - name: Restore + SDK 生成 + pack (win-x64)
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
 
-          # MSVC env を立てる (dumpbin / lib / cl が PATH に乗る)。
-          # Enter-VsDevShell の env は同 step の pwsh プロセス内のみ有効。
-          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-          $vsInstall = & $vswhere -latest -property installationPath
-          if (-not $vsInstall) { throw "Visual Studio not found via vswhere" }
-          Import-Module (Join-Path $vsInstall 'Common7\Tools\Microsoft.VisualStudio.DevShell.dll')
-          Enter-VsDevShell -VsInstallPath $vsInstall -DevCmdArguments '-arch=x64 -no_logo' -SkipAutomaticLocation
+          # csproj の <MaxRevGdalVersion> / <GdalUpstreamVersion> を取り出して
+          # generate-sdk.ps1 に explicit に渡す (csproj を source of truth に固定)。
+          $maxRev = (dotnet msbuild src/EzGdal/EzGdal.csproj -getProperty:MaxRevGdalVersion).Trim()
+          $gdal   = (dotnet msbuild src/EzGdal/EzGdal.csproj -getProperty:GdalUpstreamVersion).Trim()
+          Write-Host "MaxRevGdalVersion=$maxRev GdalUpstreamVersion=$gdal"
 
           dotnet restore src/EzGdal/EzGdal.csproj -p:_NeedWindows=true -p:RuntimeIdentifier=win-x64
-          .\scripts\win-sdk\generate-sdk.ps1
+          .\scripts\win-sdk\generate-sdk.ps1 -MaxRevGdalVersion $maxRev -GdalUpstreamVersion $gdal
           bash ./scripts/pack-tool.sh win-x64
 
       - uses: actions/upload-artifact@v4
@@ -119,6 +119,9 @@ jobs:
       - name: DriverProbe
         run: dotnet run --project verify/DriverProbe/DriverProbe.csproj -c Release
 
+      - uses: ./.github/actions/setup-msvc
+        if: matrix.rid == 'win-x64'
+
       # Windows プラグイン SDK の end-to-end 検証。win-x64 nupkg のみ実行:
       # 1) sdk/lib/gdal.lib + sdk/include/gdal/*.h + sdk/cmake/EzGdalSdk.cmake が
       #    install 後の tool ディレクトリに存在すること
@@ -129,12 +132,6 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-
-          # MSVC env (pack-windows と同じ vswhere ロジック)
-          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-          $vsInstall = & $vswhere -latest -property installationPath
-          Import-Module (Join-Path $vsInstall 'Common7\Tools\Microsoft.VisualStudio.DevShell.dll')
-          Enter-VsDevShell -VsInstallPath $vsInstall -DevCmdArguments '-arch=x64 -no_logo' -SkipAutomaticLocation
 
           # tool-test 配下に同梱された sdk/ を探索 (.store/.../tools/net10.0/any/sdk)
           $sdkLib = Get-ChildItem -Recurse -Filter gdal.lib -Path tool-test -ErrorAction SilentlyContinue | Select-Object -First 1
