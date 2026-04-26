@@ -242,10 +242,15 @@ install_name_tool -change /opt/homebrew/opt/gdal/lib/libgdal.38.dylib \
 
 - [x] `Gdal.GeneralCmdLineProcessor` の C# 公開状況 → SWIG bindings に expose 済み (Probe 5)。P/Invoke 不要
 - [x] `Gdal.SetConfigOption` を `GdalBase.ConfigureAll()` の前に呼べるか + 値が保持されるか → 両方 OK (Probe 0a/0b)
-- [ ] MaxRev.Gdal nupkg に GDAL ヘッダが含まれるか（案 C 用、未着手）
-- [ ] MaxRev libgdal の独自パッチ有無（ABI ズレ可能性、案 C で要確認）
+- [x] MaxRev.Gdal nupkg に GDAL ヘッダが含まれるか → **含まれない**。Windows runtime nupkg (3.12.3.499 / 3.12.0.397 双方確認) は `gdal.dll` のみで `.lib` / `.h` / `.def` 一切なし。Windows プラグイン正式サポート化時は ez-gdal 側で生成・配布が必要。詳細は [`docs/win-plugin-poc.md`](win-plugin-poc.md)
+- [x] MaxRev WindowsRuntime の upstream GDAL バージョン → 3.12.3 (nuspec の `description` / `releaseNotes` で確認、3.12.3.499 時点)
+- [ ] MaxRev libgdal の独自パッチ有無（ABI ズレ可能性、Windows プラグイン SDK 化時 / 案 C で要確認）
 - [ ] 案 C 実装時の PackageId 命名規則（`Jumboly.EzGdal-GeoAccess.<rid>` で良いか）
 - [ ] gdal-ga-driver を ezgdal リポジトリに組み込むか（submodule / 別リポジトリ + ExternalProject / 独立リポジトリのまま）
+
+なお Windows プラグイン正式サポート化 (案 B の延長線) の準備は別途進行中。
+Phase 1 (調査と PoC) の結果は [`docs/win-plugin-poc.md`](win-plugin-poc.md)、
+PoC スクリプトは [`scripts/win-sdk/`](../scripts/win-sdk/) を参照。
 
 ## 9. 実装時の落とし穴 (備忘)
 

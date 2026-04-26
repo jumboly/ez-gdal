@@ -8,6 +8,7 @@
 /publish/
 /tool-test/
 /verify/DummyPlugin/build/
+/scripts/win-sdk/build/
 /.scratch/
 /.claude/
 
