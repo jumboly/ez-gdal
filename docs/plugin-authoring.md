@@ -166,7 +166,7 @@ GEOS がロードされ、両方を跨ぐオブジェクトの取り回しで cr
 |   | (2) `std::string` / `std::vector` / `std::map` を引数・戻り値に取る GDAL 内部 API (`CPLString` 系を含む) を多用 |
 |   | (3) GEOS / PROJ / SQLite を直接リンク (§4.4 参照) |
 |   | (4) GDAL の inline テンプレート (`OGRSpatialReference` の一部メソッド等) を多用、ODR 違反のリスクあり |
-|   | (5) GDAL の private header (`gdal_priv.h` の一部、`ogr_p.h` 等) を使用 |
+|   | (5) GDAL の internal header (`_p.h` サフィックスを持つ `ogr_p.h` / `cpl_minixml_p.h` 等) を使用 |
 
 シンプルなフォーマット reader (独自バイナリの Identify + Open + 行を
 yield) は Safe、CRS 変換 + 幾何加工 + ストリーミングを行う高機能な
