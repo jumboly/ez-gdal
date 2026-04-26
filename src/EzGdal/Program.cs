@@ -13,7 +13,7 @@ internal static class Program
         // skip して即座に出力する。eval "$(ezgdal completion bash)" 等を rc に
         // 書く運用ではこれがインタラクティブシェル起動の hot path に乗り、
         // ConfigureAll() の ~100-500ms オーバーヘッドが体感に効くため。
-        if (appName is "ezgdal" or "gdal" && args.Length >= 1 && args[0] == "completion")
+        if (AppletRegistry.IsMainEntry(appName) && args.Length >= 1 && args[0] == "completion")
             return CompletionApplet.Run(args[1..]);
 
         try
@@ -52,7 +52,7 @@ internal static class Program
             return handler(processed);
         }
 
-        if (appName is "ezgdal" or "gdal")
+        if (AppletRegistry.IsMainEntry(appName))
             return RunMainEntry(args);
 
         return UnknownApplet(appName);

@@ -1,3 +1,4 @@
+using EzGdal.Applets;
 using OSGeo.GDAL;
 
 namespace EzGdal.Util;
@@ -57,7 +58,7 @@ internal static class GdalCli
     {
         if (programName.StartsWith("ogr", StringComparison.Ordinal))
             return OF_VECTOR;
-        if (programName is "ezgdal" or "gdal")
+        if (AppletRegistry.IsMainEntry(programName))
             return OF_ALL;
         return OF_RASTER;
     }

@@ -30,4 +30,9 @@ internal static class AppletRegistry
     };
 
     public static IEnumerable<string> AllNames => Dispatchers.Keys;
+
+    // 「メインエントリ名」の単一ソース。argv[0] (もしくは symlink/rename 先) が
+    // ここに含まれるとき、ezgdal は legacy applet 名ではなく統一 CLI 入口
+    // (`ezgdal raster info` や `ezgdal completion bash` 等) として動作する。
+    public static bool IsMainEntry(string appName) => appName is "ezgdal" or "gdal";
 }

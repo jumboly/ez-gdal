@@ -44,7 +44,16 @@ internal static class CompletionApplet
         }
 
         using var stdout = Console.OpenStandardOutput();
-        stream.CopyTo(stdout);
+        try
+        {
+            stream.CopyTo(stdout);
+        }
+        catch (IOException)
+        {
+            // `ezgdal completion fish | head` のような診断ユースで受け手が早期に
+            // pipe を閉じた際の broken pipe を握り潰す。.NET 既定の unhandled
+            // 経路だと stack trace が表示されてユーザーを混乱させるため。
+        }
         return ExitCode.Success;
     }
 
