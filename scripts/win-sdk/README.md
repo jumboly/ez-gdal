@@ -110,6 +110,17 @@ end-to-end 妥当性を毎回ガードする。
 - **`gdal_version.h`**: configure 生成のため、Major/Minor/Rev/RELEASE_NAME
   のみのスタブを生成する。`GDAL_VERSION_BUILD` や `GDAL_RELEASE_DATE` は
   埋め込まない (プラグインで参照されることは稀)。
+- **`cpl_config.h` はハンドコード stub**: 本来 GDAL の CMake configure が
+  `port/cpl_config.h.in` の `#cmakedefine` を解決して生成する build 成果物
+  だが、MaxRev の WindowsRuntime nupkg はこれを同梱しない。`fetch-gdal-headers.ps1`
+  内に Windows MSVC x64 (LLP64) 前提の最小スタブを埋め込み、`cpl_port.h`
+  が unconditional に要求する `SIZEOF_INT` / `SIZEOF_UNSIGNED_LONG` /
+  `SIZEOF_VOIDP` / `CPL_STDCALL` のみ揃えている。MaxRev が実際に build
+  時に使った `HAVE_*` フラグ群とは厳密には一致しない可能性があり、それらが
+  public API に影響する場合 plugin の ABI が微妙にズレる。多くの define
+  は `#ifdef GDAL_COMPILATION` 内なので plugin からは見えず実害は低いが、
+  plugin 作者から ABI 起因の異常報告があったらここを最初に疑うこと。
+  本筋の解は MaxRev upstream に `cpl_config.h` 同梱を要請すること。
 - **internal header (`*_p.h`) は除外**: GDAL の内部 ABI に依存するプラグインは
   そもそも Risky pattern (`docs/plugin-authoring.md §4.5`) なので非公開
 - **frmts/ サブドライバヘッダは未網羅**: `frmts/*.h` のうち各ドライバ
