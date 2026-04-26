@@ -25,13 +25,18 @@
   <PropertyGroup Label="ToolPackage">
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>ezgdal</ToolCommandName>
-    <Version>0.1.0</Version>
-    <Authors>masa</Authors>
+    <Version>1.0.0</Version>
+    <Authors>jumboly</Authors>
+    <Title>ezgdal — portable GDAL CLI</Title>
     <Description>One-binary, portable GDAL CLI. Supports legacy EXE names (gdalinfo, gdal_translate, gdalwarp, ogr2ogr, ogrinfo, ...) plus the GDAL 3.12+ unified `gdal` CLI. After install, run `ezgdal install-applets` to expose legacy EXE-name symlinks. Native binaries for $(PackTargetRid).</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageOutputPath>$(MSBuildThisFileDirectory)..\..\nupkg</PackageOutputPath>
     <PackageTags>gdal;cli;geospatial;ogr;raster;vector;pmtiles;ogr2ogr;gdalinfo</PackageTags>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/jumboly/ez-gdal</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/jumboly/ez-gdal</PackageProjectUrl>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
 
     <PackageId Condition="'$(PackTargetRid)' == 'osx-arm64'">Jumboly.EzGdal.osx-arm64</PackageId>
     <PackageId Condition="'$(PackTargetRid)' == 'osx-x64'">Jumboly.EzGdal.osx-x64</PackageId>
@@ -115,11 +120,11 @@
 
   <ItemGroup>
     <PackageReference Include="MaxRev.Gdal.Core" Version="3.12.3.499" />
-    <PackageReference Include="MaxRev.Gdal.MacosRuntime.Minimal.arm64" Version="3.12.2.472" Condition="'$(_NeedMacArm64)' == 'true'" />
-    <PackageReference Include="MaxRev.Gdal.MacosRuntime.Minimal.x64"   Version="3.12.2.472" Condition="'$(_NeedMacX64)' == 'true'" />
-    <PackageReference Include="MaxRev.Gdal.LinuxRuntime.Minimal.x64"   Version="3.12.0.397" Condition="'$(_NeedLinuxX64)' == 'true'" />
-    <PackageReference Include="MaxRev.Gdal.LinuxRuntime.Minimal.arm64" Version="3.12.0.397" Condition="'$(_NeedLinuxArm64)' == 'true'" />
-    <PackageReference Include="MaxRev.Gdal.WindowsRuntime.Minimal"     Version="3.12.0.397" Condition="'$(_NeedWindows)' == 'true'" />
+    <PackageReference Include="MaxRev.Gdal.MacosRuntime.Minimal.arm64" Version="3.12.3.499" Condition="'$(_NeedMacArm64)' == 'true'" />
+    <PackageReference Include="MaxRev.Gdal.MacosRuntime.Minimal.x64"   Version="3.12.3.499" Condition="'$(_NeedMacX64)' == 'true'" />
+    <PackageReference Include="MaxRev.Gdal.LinuxRuntime.Minimal.x64"   Version="3.12.3.499" Condition="'$(_NeedLinuxX64)' == 'true'" />
+    <PackageReference Include="MaxRev.Gdal.LinuxRuntime.Minimal.arm64" Version="3.12.3.499" Condition="'$(_NeedLinuxArm64)' == 'true'" />
+    <PackageReference Include="MaxRev.Gdal.WindowsRuntime.Minimal"     Version="3.12.3.499" Condition="'$(_NeedWindows)' == 'true'" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,100 @@
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  pack:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: tag が csproj <Version> と一致するか
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          csver=$(grep -oP '(?<=<Version>)[^<]+' src/EzGdal/EzGdal.csproj)
+          echo "tag=$tag csproj=$csver"
+          test "$tag" = "$csver"
+
+      - name: Pack 5 RIDs
+        run: ./scripts/pack-tool.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nupkgs
+          path: nupkg/Jumboly.EzGdal.*.nupkg
+          if-no-files-found: error
+
+  verify:
+    needs: pack
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-22.04,     rid: linux-x64 }
+          - { os: ubuntu-22.04-arm, rid: linux-arm64 }
+          - { os: macos-14,         rid: osx-arm64 }
+          - { os: macos-13,         rid: osx-x64 }
+          - { os: windows-2022,     rid: win-x64 }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: nupkgs
+          path: nupkg
+
+      - name: tool install
+        shell: bash
+        run: |
+          ver="${GITHUB_REF_NAME#v}"
+          dotnet tool install --tool-path ./tool-test \
+            --add-source ./nupkg \
+            "Jumboly.EzGdal.${{ matrix.rid }}" --version "$ver"
+
+      - name: smoke
+        shell: bash
+        run: |
+          ./tool-test/ezgdal --version
+          ./tool-test/ezgdal raster --formats | head -10
+
+      - name: DriverProbe
+        run: dotnet run --project verify/DriverProbe/DriverProbe.csproj -c Release
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-22.04
+    environment: nuget
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: nupkgs
+          path: nupkg
+
+      - name: NuGet.org push
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          for f in nupkg/Jumboly.EzGdal.*.nupkg; do
+            echo "=== $f ==="
+            dotnet nuget push "$f" \
+              --source https://api.nuget.org/v3/index.json \
+              --api-key "$NUGET_API_KEY" \
+              --skip-duplicate
+          done

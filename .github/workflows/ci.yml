@@ -1,0 +1,32 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore + Build
+        run: dotnet build src/EzGdal/EzGdal.csproj -c Release
+
+      - name: DriverProbe (linux-x64 host)
+        run: dotnet run --project verify/DriverProbe/DriverProbe.csproj -c Release
+
+      - name: Pack linux-x64 (smoke)
+        run: ./scripts/pack-tool.sh linux-x64
+
+      - name: nuspec smoke check
+        run: |
+          unzip -p nupkg/Jumboly.EzGdal.linux-x64.*.nupkg '*.nuspec' \
+            | grep -E '<authors>jumboly</authors>'
+          unzip -p nupkg/Jumboly.EzGdal.linux-x64.*.nupkg '*.nuspec' \
+            | grep -E '<repository '
