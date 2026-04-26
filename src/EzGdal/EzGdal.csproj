@@ -33,7 +33,7 @@
   <PropertyGroup Label="ToolPackage">
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>ezgdal</ToolCommandName>
-    <Version>1.1.1</Version>
+    <Version>1.1.2</Version>
     <Authors>jumboly</Authors>
     <Title>ezgdal — portable GDAL CLI</Title>
     <Description>One-binary, portable GDAL CLI. Supports legacy EXE names (gdalinfo, gdal_translate, gdalwarp, ogr2ogr, ogrinfo, ...) plus the GDAL 3.12+ unified `gdal` CLI. After install, run `ezgdal install-applets` to expose legacy EXE-name symlinks. Native binaries for $(PackTargetRid).</Description>
