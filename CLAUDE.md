@@ -62,6 +62,12 @@ dotnet run --project verify/DriverProbe/DriverProbe.csproj
 
 NuGet.org への push（メンテナ向け）は README.md の「NuGet.org への公開」節を参照。
 
+## ドキュメント
+
+- `README.md` — エンドユーザー向け、インストール手順 / RID 別 PackageId 一覧 / NuGet.org publish 手順
+- `docs/external-plugin-support.md` — 外部 GDAL ドライバプラグイン（`ogr_<X>.{so,dylib,dll}`）対応の仕様書。`GDAL_DRIVER_PATH` 経由の動作確認結果と実装方針 A/B/C を整理。別セッションで実装するときの起点
+- `verify/DriverProbe/` — MaxRev.Gdal の機能確認スタンドアロン（前述）
+
 ## アーキテクチャ
 
 ### 起動フロー（`src/EzGdal/`）
@@ -130,4 +136,4 @@ return outDs == null ? ExitCode.Failure : ExitCode.Success;
 
 - 起動オーバーヘッド ~100-500ms（.NET ランタイム + ネイティブ展開）。シェルスクリプトで多重ループ起動する用途では本物 GDAL EXE のほうが高速
 - `gdalmanage` は GDAL に C API がなく未対応（`ezgdal vsi list` / `vsi copy` 等で代替推奨）
-- 追加プラグイン（`GDAL_DRIVER_PATH` 経由の外部 .so/.dll ロード）は single-file 前提のため非対応
+- 追加プラグインは README / コード上「非対応」と記述しているが、実機検証では `GDAL_DRIVER_PATH` 環境変数経由で読み込めることが判明（`docs/external-plugin-support.md`）。記述訂正と GDAL 標準フラグ (`--formats` 等) の対応は別セッションで実施予定
