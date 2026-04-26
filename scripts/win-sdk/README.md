@@ -4,8 +4,6 @@
 **import library (`gdal.lib`) + GDAL 公開ヘッダ + CMake config** を
 生成するスクリプト群。
 
-> 経緯と判断材料: [`docs/win-plugin-poc.md`](../../docs/win-plugin-poc.md) /
-> [`docs/external-plugin-support.md`](../../docs/external-plugin-support.md)。
 > 利用者向けの組み込み手順: [`docs/plugin-authoring.md` §4.1](../../docs/plugin-authoring.md#windows)
 
 ## なぜ存在するか

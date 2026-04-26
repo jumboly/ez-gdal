@@ -83,7 +83,6 @@ NuGet.org への push（メンテナ向け）は `docs/release.md` を参照。
 - `README.md` — エンドユーザー向け、インストール手順 / RID 別 PackageId 一覧 / 外部プラグインの利用方法
 - `docs/release.md` — メンテナ向け、ローカルビルド (`pack-tool.sh` / `publish-all.sh`) と NuGet.org publish 手順
 - `docs/plugin-authoring.md` — 外部 GDAL ドライバプラグイン作成者向け。ABI 互換性、ファイル命名規約、ビルドフラグ (`-undefined dynamic_lookup` / `--allow-shlib-undefined`)、トラブルシュート
-- `docs/external-plugin-support.md` — 外部プラグイン対応の検討時に整理した経緯 (実装済み)。実装方針 A/B/C のうち B 相当を採用
 - `verify/DriverProbe/` — MaxRev.Gdal の機能確認スタンドアロン（前述）
 - `verify/DummyPlugin/` — install-plugin / list-plugins / remove-plugin 動作確認用の最小 OGR ドライバ (`ogr_Dummy.so`)。CMake で host GDAL (Homebrew / apt) に対してビルド
 - `scripts/completions/README.md` — bash/zsh/fish/PowerShell 補完スクリプトの導入手順 (ユーザー向け) と再生成手順 (メンテナ向け)

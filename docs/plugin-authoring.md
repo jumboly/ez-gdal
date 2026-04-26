@@ -381,3 +381,30 @@ stub 制限を参照)。plugin で参照しないか、自前で `#ifndef ... #d
 
 - 動く最小例: `verify/DummyPlugin/`
 - GDAL 公式: https://gdal.org/development/dev_practices.html#building-gdal-from-the-source-code
+
+## 付録: 実装時の落とし穴 (備忘)
+
+### `--formats` がプラグインドライバを表示しない問題
+
+GDAL 3.12 の `GDALPrintDriverList(int nOptions, bool bJSON)` は `nOptions==0`
+を `OF_RASTER` に変換するため、SWIG 経由で 0 を渡すとデフォルト raster only
+になる。`DCAP_VECTOR=YES` のみのプラグインは `ogrinfo --formats` でも
+見えなくなる。
+
+→ `Util/GdalCli.cs` で applet 名から `OF_VECTOR` / `OF_RASTER` / `OF_ALL`
+を自動選択する `NOptionsFor` を実装し、`Gdal.GeneralCmdLineProcessor(argv,
+nOptions)` の第 2 引数に渡している。MaxRev バンプ時に SWIG 出力が変わって
+`GeneralCmdLineProcessor` が消えた・引数が変わった場合はここを直す。
+
+### driver manager 分裂 (`-undefined dynamic_lookup` を要求する理由)
+
+プラグインを `-lgdal` でリンクすると、ezgdal プロセスに 2 つの libgdal
+(内蔵 MaxRev + プラグインのリンク先 Homebrew 等) が並列で読まれ、
+driver manager が分裂する (`GetGDALDriverManager()` がプラグインから
+見たときに別インスタンスを返す)。結果、`AutoLoadDrivers` のログには
+"Auto register" が出るのに、ezgdal からはドライバが見えない症状になる。
+
+→ プラグイン側で macOS は `-Wl,-undefined,dynamic_lookup`、Linux は
+`-Wl,--allow-shlib-undefined` を使い、libgdal シンボルを host のものに
+解決させる。Windows は `Jumboly.EzGdal.win-x64` 同梱の SDK
+(`sdk/lib/gdal.lib`) にリンクする。詳細は §4.1。
