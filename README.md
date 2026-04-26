@@ -186,11 +186,41 @@ xattr -d com.apple.quarantine /path/to/ezgdal
 
 `ezgdal install-applets` はシンボリックリンクを優先し、Windows で Developer Mode が無効な場合は自動的にコピーへフォールバックします（`--copy` で明示的にコピーを強制可）。
 
+## 外部プラグインの利用
+
+内蔵ドライバに含まれない GDAL ドライバを `.so / .dylib / .dll` プラグイン形式で追加できます。
+
+```bash
+# プラグイン (例: ogr_GeoAccess.so) をユーザーローカルに配置
+ezgdal install-plugin /path/to/ogr_GeoAccess.so
+
+# 配置済みプラグインを一覧
+ezgdal list-plugins
+
+# 自動ロード確認
+ezgdal ogrinfo --formats | grep GeoAccess
+
+# 削除
+ezgdal remove-plugin ogr_GeoAccess.so
+```
+
+配置先:
+
+| OS | パス |
+|---|---|
+| macOS | `~/Library/Application Support/ezgdal/plugins/` |
+| Linux | `$XDG_DATA_HOME/ezgdal/plugins/` (未設定時 `~/.local/share/ezgdal/plugins/`) |
+| Windows | `%APPDATA%\ezgdal\plugins\` |
+
+ezgdal は起動時に上記ディレクトリを `GDAL_DRIVER_PATH` に追加します。ユーザー側で `GDAL_DRIVER_PATH` を立てている場合は両方が連結されます。
+
+> **ABI 互換性は自己責任**: プラグインは内蔵 GDAL (現在 3.12.2) と同じ minor バージョンに対してビルドしてください。違う minor だと dlopen 失敗 / silent crash の原因になります。プラグインを自作する場合のビルド手順・ABI 互換のための注意は [`docs/plugin-authoring.md`](docs/plugin-authoring.md) を参照。
+
 ## 既知の制限
 
 - **起動オーバーヘッド**: .NET ランタイム + ネイティブ展開で 100-500ms 程度。シェルスクリプトで多重ループ起動する用途では本物の GDAL EXE のほうが高速です。
 - **`gdalmanage` は未対応**: GDAL の C API に対応関数がありません。代わりに `ezgdal vsi list` / `vsi copy` 等の VSI コマンドを使ってください。
-- **GDAL ドライバの追加プラグインは未対応**: Self-contained single-file の制約上、外部 `.so/.dll` プラグインを動的ロードする `GDAL_DRIVER_PATH` の利用は想定していません。
+- **Windows での外部プラグインは β サポート**: macOS / Linux ではプラグインビルド時に `-undefined dynamic_lookup` / `--allow-shlib-undefined` で host の libgdal にシンボル解決を委ねられますが、Windows DLL では同等の手段がないため、ezgdal 同梱 libgdal の import library が必要です（現状は提供していません）。
 
 ## License
 

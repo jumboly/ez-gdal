@@ -1,7 +1,7 @@
-# 外部 GDAL ドライバプラグイン対応（仕様書）
+# 外部 GDAL ドライバプラグイン対応（仕様書 / 経緯）
 
-> ステータス: **検討中**（2026-04-26 に動作確認まで完了、実装方針未確定）
-> 想定読者: 別セッションで本件を引き継いで実装する Claude / 開発者
+> ステータス: **実装済み** (2026-04-26)。ezgdal 0.x 以降で `install-plugin` / `list-plugins` / `remove-plugin` サブコマンドを提供。本書は当時の検討経緯を残すための歴史ドキュメントで、利用者向け情報は README.md、プラグイン作者向け情報は `docs/plugin-authoring.md` を参照。
+> 想定読者: 当時の判断基準を辿りたい開発者
 
 ## 1. 背景と目的
 
@@ -167,12 +167,17 @@ Gdal.SetConfigOption("GDAL_DRIVER_PATH", pluginDir);
 | **B. 最小改修** | A + `GDALGeneralCmdLineProcessor` を Bootstrap で統合し `--formats` / `--version` 等を共通対応。ABI 互換性ガイド追記 | 中（半日〜1日） | Bootstrap + Program、各 applet の Arity 表は変更不要 |
 | **C. 同梱版を独立配布** | gdal-ga-driver を ezgdal リポジトリの build 経路に組み込み、`Jumboly.EzGdal-GeoAccess.<rid>` として独立配布。MaxRev libgdal に対するクロスビルド環境を整備 | 大（数日〜週） | csproj、scripts、CI、新規 nupkg、ABI 整合の検証マトリクス |
 
-### 推奨
+### 採用結果
 
-**B → 必要に応じ C** の段階進行。
+**案 B 相当を採用 + さらにユーザーローカルディレクトリへの install サブコマンドを追加**。
 
-- B の段階で「ユーザーが任意の plugin を使える」基盤が整う
-- gdal-ga-driver の Phase 1 以降で実機能が完成し、配布チャネルから提供したい状況になったら C に進む
+- `Util/PluginPaths.cs` で OS 別ユーザープラグインディレクトリ取得
+- `Bootstrap` の ConfigureAll 前に `Gdal.SetConfigOption("GDAL_DRIVER_PATH", ...)` で自動ロード
+- `ezgdal install-plugin / list-plugins / remove-plugin` サブコマンドで管理
+- `Util/GdalCli.cs` で `--version` / `--formats` 等を全 applet 共通処理 (applet 名から `OF_RASTER` / `OF_VECTOR` / `OF_ALL` を自動選択)
+- 動作確認用ダミーは `verify/DummyPlugin/`
+
+案 C は当時の懸念事項のまま未採用。gdal-ga-driver 等を bundle したい場合の今後の選択肢として残置。
 
 ## 5. 別セッションでの作業手順
 
@@ -235,8 +240,23 @@ install_name_tool -change /opt/homebrew/opt/gdal/lib/libgdal.38.dylib \
 
 ## 8. 未確定事項
 
-- [ ] `Gdal.GeneralCmdLineProcessor` の C# 公開状況（要 Probe）
-- [ ] MaxRev.Gdal nupkg に GDAL ヘッダが含まれるか（要展開確認、案 C 用）
+- [x] `Gdal.GeneralCmdLineProcessor` の C# 公開状況 → SWIG bindings に expose 済み (Probe 5)。P/Invoke 不要
+- [x] `Gdal.SetConfigOption` を `GdalBase.ConfigureAll()` の前に呼べるか + 値が保持されるか → 両方 OK (Probe 0a/0b)
+- [ ] MaxRev.Gdal nupkg に GDAL ヘッダが含まれるか（案 C 用、未着手）
 - [ ] MaxRev libgdal の独自パッチ有無（ABI ズレ可能性、案 C で要確認）
 - [ ] 案 C 実装時の PackageId 命名規則（`Jumboly.EzGdal-GeoAccess.<rid>` で良いか）
 - [ ] gdal-ga-driver を ezgdal リポジトリに組み込むか（submodule / 別リポジトリ + ExternalProject / 独立リポジトリのまま）
+
+## 9. 実装時の落とし穴 (備忘)
+
+### `--formats` がプラグインドライバを表示しない問題 (解決済み)
+
+GDAL 3.12 の `GDALPrintDriverList(int nOptions, bool bJSON)` は `nOptions==0` を `OF_RASTER` に変換するため、SWIG 経由で 0 を渡すとデフォルト raster only になる。`DCAP_VECTOR=YES` のみのプラグインは `ogrinfo --formats` でも見えなくなる。
+
+→ `Util/GdalCli.cs` で applet 名から `OF_VECTOR` / `OF_RASTER` / `OF_ALL` を自動選択する `NOptionsFor` を実装し、`Gdal.GeneralCmdLineProcessor(argv, nOptions)` の第 2 引数に渡すことで解決。
+
+### プラグインの libgdal 依存問題 (`-undefined dynamic_lookup`)
+
+プラグインを `-lgdal` でリンクすると、ezgdal プロセスに 2 つの libgdal (内蔵 MaxRev + プラグインのリンク先 Homebrew 等) が並列で読まれ、driver manager が分裂する (`GetGDALDriverManager()` がプラグインから見たときに別インスタンスを返す)。結果、`AutoLoadDrivers` のログには "Auto register" が出るのに、ezgdal からはドライバが見えない症状になる。
+
+→ プラグイン側で macOS は `-Wl,-undefined,dynamic_lookup`、Linux は `-Wl,--allow-shlib-undefined` を使い、libgdal シンボルを host のものに解決させる。Windows は β サポートとした。詳細は `docs/plugin-authoring.md` §4.1。

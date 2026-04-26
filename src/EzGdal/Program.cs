@@ -1,4 +1,5 @@
 using EzGdal.Applets;
+using EzGdal.Util;
 
 namespace EzGdal;
 
@@ -36,7 +37,11 @@ internal static class Program
     static int Dispatch(string appName, string[] args)
     {
         if (AppletRegistry.Dispatchers.TryGetValue(appName, out var handler))
-            return handler(args);
+        {
+            var processed = GdalCli.Process(appName, args);
+            if (processed == null) return Util.ExitCode.Success;
+            return handler(processed);
+        }
 
         if (appName is "ezgdal" or "gdal")
             return RunMainEntry(args);
@@ -48,12 +53,30 @@ internal static class Program
     {
         if (args.Length > 0)
         {
+            // ezgdal 固有のサブコマンド: --prefix 等が GDAL 一般フラグと衝突するため前処理を経由させない。
             if (args[0] == "install-applets")
                 return InstallAppletsApplet.Run(args[1..]);
             if (args[0] == "uninstall-applets")
                 return InstallAppletsApplet.Run(["--uninstall", .. args[1..]]);
+            if (args[0] == "install-plugin")
+                return InstallPluginApplet.Run(args[1..]);
+            if (args[0] == "list-plugins")
+                return ListPluginsApplet.Run(args[1..]);
+            if (args[0] == "remove-plugin")
+                return RemovePluginApplet.Run(args[1..]);
+
+            // `ezgdal gdalinfo ...` 経由でも Dispatch と同じ前処理を適用 (--formats フィルタの applet 別 nOptions が効くように)。
+            if (AppletRegistry.Dispatchers.TryGetValue(args[0], out var legacyHandler))
+            {
+                var legacyProcessed = GdalCli.Process(args[0], args[1..]);
+                if (legacyProcessed == null) return Util.ExitCode.Success;
+                return legacyHandler(legacyProcessed);
+            }
         }
-        return UnifiedCliApplet.Run(args);
+
+        var processed = GdalCli.Process("ezgdal", args);
+        if (processed == null) return Util.ExitCode.Success;
+        return UnifiedCliApplet.Run(processed);
     }
 
     static int UnknownApplet(string name)

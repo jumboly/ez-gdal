@@ -14,8 +14,36 @@ internal static class Program
         Console.WriteLine($"OS: {System.Runtime.InteropServices.RuntimeInformation.OSDescription}");
         Console.WriteLine();
 
+        // Phase 0: ConfigureAll の前に CPL config option を立てたい (Bootstrap で
+        // GDAL_DRIVER_PATH を渡す手段として SetConfigOption を使うため)。SWIG の
+        // static initializer が GDAL native の前に呼べるか + 値が ConfigureAll 後も
+        // 保持されるかを観察する。
+        const string kDriverPathProbe = "/tmp/ezgdal-probe-plugins";
+        Console.WriteLine("[Probe 0a] Gdal.SetConfigOption(GDAL_DRIVER_PATH, ...) BEFORE ConfigureAll");
+        try
+        {
+            Gdal.SetConfigOption("GDAL_DRIVER_PATH", kDriverPathProbe);
+            Console.WriteLine("  set OK");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"  threw: {ex.GetType().Name}: {ex.Message}");
+        }
+
         Console.WriteLine("[Probe] Calling GdalBase.ConfigureAll()...");
         GdalBase.ConfigureAll();
+
+        Console.WriteLine("[Probe 0b] Gdal.GetConfigOption(GDAL_DRIVER_PATH) AFTER ConfigureAll");
+        try
+        {
+            var v = Gdal.GetConfigOption("GDAL_DRIVER_PATH", "<null>");
+            Console.WriteLine($"  value = {v}");
+            Console.WriteLine($"  preserved = {v == kDriverPathProbe}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"  threw: {ex.GetType().Name}: {ex.Message}");
+        }
 
         Console.WriteLine($"GDAL version: {Gdal.VersionInfo("RELEASE_NAME")}");
         Console.WriteLine($"GDAL build:   {Gdal.VersionInfo("BUILD_INFO")}");
@@ -122,6 +150,30 @@ internal static class Program
             .OrderBy(t => t.Name);
         foreach (var t in opts)
             Console.WriteLine($"  {t.Name}");
+
+        // --- Probe 5: GeneralCmdLineProcessor の SWIG expose 状況 ---
+        Console.WriteLine();
+        Console.WriteLine("[Probe 5] GDALGeneralCmdLineProcessor exposure in OSGeo.GDAL bindings");
+        var generalMethods = typeof(Gdal).GetMethods(BindingFlags.Public | BindingFlags.Static)
+            .Where(m => m.Name.Contains("General", StringComparison.OrdinalIgnoreCase)
+                     || m.Name.Contains("CmdLine", StringComparison.OrdinalIgnoreCase)
+                     || m.Name.Contains("CommandLine", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        Console.WriteLine($"  matched static methods on Gdal: {generalMethods.Count}");
+        foreach (var m in generalMethods)
+        {
+            Console.WriteLine($"    {m}");
+        }
+        // P/Invoke 用に他の cpl_conv 系もついでに確認
+        var cplFuncs = typeof(Gdal).GetMethods(BindingFlags.Public | BindingFlags.Static)
+            .Where(m => m.Name.StartsWith("CPL", StringComparison.OrdinalIgnoreCase)
+                     || m.Name.Contains("ParseCommandLine", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        Console.WriteLine($"  CPL* / ParseCommandLine methods: {cplFuncs.Count}");
+        foreach (var m in cplFuncs)
+        {
+            Console.WriteLine($"    {m}");
+        }
 
         // --- Probe 3: 環境変数の漏れチェックの下準備 ---
         Console.WriteLine();

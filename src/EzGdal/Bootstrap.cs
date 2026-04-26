@@ -1,3 +1,4 @@
+using EzGdal.Util;
 using MaxRev.Gdal.Core;
 using OSGeo.GDAL;
 using OSGeo.OGR;
@@ -18,6 +19,9 @@ internal static class Bootstrap
         // ここでの設定は将来 BCL の数値変換が GDAL に渡る場合の保険。
         Thread.CurrentThread.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
 
+        // GdalBase.ConfigureAll() 内の GDALAllRegister がこの値を読むので、ここで立てる。
+        ApplyUserPluginPath();
+
         GdalBase.ConfigureAll();
 
         // 本物の GDAL EXE と挙動を揃えるため、例外を投げず stderr に "ERROR N: msg" を
@@ -37,5 +41,18 @@ internal static class Bootstrap
     private static void Cleanup()
     {
         try { Gdal.GDALDestroyDriverManager(); } catch { }
+    }
+
+    private static void ApplyUserPluginPath()
+    {
+        var userDir = PluginPaths.GetUserPluginDir();
+        if (!Directory.Exists(userDir))
+            return;
+
+        // ユーザーが env で立てている GDAL_DRIVER_PATH を尊重して連結する。
+        var existing = Environment.GetEnvironmentVariable("GDAL_DRIVER_PATH");
+        var sep = OperatingSystem.IsWindows() ? ";" : ":";
+        var combined = string.IsNullOrEmpty(existing) ? userDir : $"{existing}{sep}{userDir}";
+        Gdal.SetConfigOption("GDAL_DRIVER_PATH", combined);
     }
 }
