@@ -153,16 +153,16 @@ jobs:
           Write-Host "---------------------------------------"
 
           # autoload smoke。CPL_DEBUG=ON で plugin loader の "Auto register" /
-          # "Can't find requested entry point" 等の診断 log を表示。stderr も
-          # 取り込んで Select-String -Quiet で null-safe 判定。
+          # "Can't find requested entry point" 等の診断 log を表示。配列のまま
+          # `-match` を適用すると element-wise filter になり、null/空でも安全。
           .\tool-test\ezgdal install-plugin $dummyDll
           $env:CPL_DEBUG = "ON"
-          $formats = (.\tool-test\ezgdal ogrinfo --formats 2>&1) -join "`n"
+          $output = .\tool-test\ezgdal ogrinfo --formats 2>&1
           Remove-Item Env:CPL_DEBUG
           Write-Host "--- ogrinfo --formats (CPL_DEBUG=ON, stdout+stderr) ---"
-          Write-Host $formats
+          $output | ForEach-Object { Write-Host $_ }
           Write-Host "--------------------------------------------------------"
-          if (-not ($formats | Select-String -Pattern '^\s*Dummy\s+-' -Quiet)) {
+          if (-not ($output -match '^\s*Dummy\s+-')) {
               throw "Dummy driver not visible after install-plugin"
           }
           Write-Host "=== Windows SDK end-to-end OK ==="
