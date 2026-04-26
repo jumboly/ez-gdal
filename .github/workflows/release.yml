@@ -123,7 +123,7 @@ jobs:
         if: matrix.rid == 'win-x64'
 
       # Windows プラグイン SDK の end-to-end 検証。win-x64 nupkg のみ実行:
-      # 1) sdk/lib/gdal.lib + sdk/include/gdal/*.h + sdk/cmake/EzGdalSdk.cmake が
+      # 1) sdk/lib/gdal.lib + sdk/include/gdal/*.h + sdk/cmake/EzGdalSdkConfig.cmake が
       #    install 後の tool ディレクトリに存在すること
       # 2) verify/DummyPlugin を SDK ベースで cmake build して ogr_Dummy.dll が生成されること
       # 3) ezgdal install-plugin → ezgdal ogrinfo --formats で Dummy が見えること

@@ -135,7 +135,7 @@ A1 への将来移行は csproj の `<PackageId>` 条件分岐 (`Jumboly.EzGdal.
 ## 4. Phase 2 推奨スコープ
 
 1. `EzGdal.csproj` に Windows 限定の `<None Include="...sdk/**/*" Pack="true" PackagePath="sdk/" />` を追加
-2. `pack-tool.sh` (または GHA `pack-windows.yml`) の win-x64 ステップで本 PoC 2 本を呼び、`sdk/lib/gdal.lib` + `sdk/include/gdal/*.h` + `sdk/cmake/EzGdalSdk.cmake` (新規) を生成
+2. `pack-tool.sh` (または GHA `pack-windows.yml`) の win-x64 ステップで本 PoC 2 本を呼び、`sdk/lib/gdal.lib` + `sdk/include/gdal/*.h` + `sdk/cmake/EzGdalSdkConfig.cmake` (新規) を生成
 3. `verify/DummyPlugin/CMakeLists.txt` に Windows 分岐追加: `find_package(EzGdalSdk REQUIRED)` で SDK パス解決
 4. windows-latest GHA runner で smoke test: ezgdal install-plugin + ezgdal vector --formats | grep Dummy
 

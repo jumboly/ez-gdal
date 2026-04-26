@@ -53,15 +53,17 @@ $tmpHdr = Join-Path $PSScriptRoot "build\hdr-staging"
 & (Join-Path $PSScriptRoot "fetch-gdal-headers.ps1") -Version $GdalUpstreamVersion -OutDir $tmpHdr
 Copy-Item (Join-Path $tmpHdr "include") -Destination $OutDir -Recurse -Force
 
-# 5. cmake config 生成 (template の @VAR@ を置換)
-$tmplPath = Join-Path $PSScriptRoot "templates\EzGdalSdk.cmake.in"
+# 5. cmake config 生成 (template の @VAR@ を置換)。
+# CMake の find_package(EzGdalSdk) は <Name>Config.cmake を期待するため、
+# 出力ファイル名は EzGdalSdkConfig.cmake に揃える必要がある。
+$tmplPath = Join-Path $PSScriptRoot "templates\EzGdalSdkConfig.cmake.in"
 if (-not (Test-Path -LiteralPath $tmplPath)) {
     throw "template not found: $tmplPath"
 }
 $cmakeContent = (Get-Content -Raw -LiteralPath $tmplPath) `
     -replace '@GdalUpstreamVersion@', $GdalUpstreamVersion `
     -replace '@MaxRevGdalVersion@',   $MaxRevGdalVersion
-Set-Content -Encoding ASCII -LiteralPath (Join-Path $cmakeDir "EzGdalSdk.cmake") -Value $cmakeContent
+Set-Content -Encoding ASCII -LiteralPath (Join-Path $cmakeDir "EzGdalSdkConfig.cmake") -Value $cmakeContent
 
 # 6. サマリ
 $libBytes = (Get-Item (Join-Path $libDir "gdal.lib")).Length
@@ -71,6 +73,6 @@ Write-Host "=== EzGdal SDK generated ==="
 Write-Host "  $OutDir"
 Write-Host "    lib/gdal.lib                      ($([math]::Round($libBytes / 1MB, 2)) MB)"
 Write-Host "    include/gdal/*.h                  ($hdrCount headers)"
-Write-Host "    cmake/EzGdalSdk.cmake             (find_package(EzGdalSdk))"
+Write-Host "    cmake/EzGdalSdkConfig.cmake       (find_package(EzGdalSdk))"
 Write-Host ""
 Write-Host "次: bash ./scripts/pack-tool.sh win-x64  で sdk/ が同梱された nupkg を作成"
